@@ -4,14 +4,14 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Settings")]
-    [SerializeField] private float baseSpeed = 60f;
-    [SerializeField] private float maxSpeed = 100f;
+    [SerializeField] private float baseSpeed = 50f;
+    [SerializeField] private float maxSpeed = 300f;
     [SerializeField] private float acceleration = 2f;
     [SerializeField] private float forwardForceMultiplier = 0.5f; // Adjust this multiplier to reduce forward force
-    [SerializeField] private float sideSpeed = 100f;
-    [SerializeField] private float jumpForce = 15f;
-    [SerializeField] private float jumpForwardBoost = 1000f;
-    [SerializeField] private float jumpCooldown = 1.19f;
+    [SerializeField] private float sideSpeed = 80f;
+    [SerializeField] private float jumpForce = 20f;
+    [SerializeField] private float jumpForwardBoost = 200f;
+    [SerializeField] private float jumpCooldown = 2f;
 
     [Header("References")]
     [SerializeField] private Rigidbody rb;
@@ -71,7 +71,7 @@ public class PlayerMovement : MonoBehaviour
         {
             currentSpeed = Mathf.Min(currentSpeed + acceleration, maxSpeed);
             // Apply reduced forward force using the multiplier
-            rb.AddForce(0, 0, currentSpeed * forwardForceMultiplier);
+            rb.AddForce(0, 0, currentSpeed * forwardForceMultiplier * Time.deltaTime, ForceMode.VelocityChange);
         }
         else
         {
@@ -81,7 +81,7 @@ public class PlayerMovement : MonoBehaviour
         // Lateral movement
         if (horizontalInput != 0)
         {
-            rb.AddForce(horizontalInput * sideSpeed, 0, 0);
+            rb.AddForce(horizontalInput * sideSpeed * Time.deltaTime, 0, 0, ForceMode.VelocityChange);
         }
 
         // Update animations
