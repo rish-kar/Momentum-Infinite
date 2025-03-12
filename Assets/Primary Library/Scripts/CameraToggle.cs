@@ -9,29 +9,28 @@ public class CameraToggle : MonoBehaviour
     public Vector3 offset3D = new Vector3(0f, 10f, -10f);
     public Vector3 offset2D = new Vector3(0f, 16f, 0f);
 
-    // A reference rotation for 3D and a top-down rotation for 2D
+    // The camera's initial rotation for 3D mode
     private Quaternion originalRotation;
 
     // Whether we are currently in 2D mode
     private bool is2D = false;
 
-    // Parameters for smoothly animating between offsets
+    // Smooth transition parameters
     public float transitionDuration = 1.0f;
     private bool isTransitioning = false;
     private float transitionTimer = 0f;
 
-    // We’ll store the start and end positions/rotations for the animation
+    // Cache the start rotation for lerping, but we will dynamically track the player's position
     private Vector3 startPos;
     private Quaternion startRot;
-    private Vector3 targetPos;
     private Quaternion targetRot;
 
     void Start()
     {
-        // Keep the camera's initial rotation for 3D mode
+        // Store the camera's initial rotation for 3D mode
         originalRotation = transform.rotation;
 
-        // Place the camera initially in 3D offset
+        // Place the camera at the 3D offset initially (if player is assigned)
         if (player != null)
         {
             transform.position = player.position + offset3D;
@@ -39,30 +38,37 @@ public class CameraToggle : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Player is not assigned. Camera will remain at default position.");
+            Debug.LogWarning("No player assigned to the camera. Please assign one in the Inspector.");
         }
     }
 
     void Update()
     {
-        // Check for toggle input
+        // Toggle between 2D and 3D when "C" is pressed
         if (Input.GetKeyDown(KeyCode.C) && !isTransitioning)
         {
             is2D = !is2D;
             BeginTransition(is2D);
         }
 
-        // If we’re in the middle of a transition, animate
+        // If in the middle of a transition, animate position & rotation
         if (isTransitioning)
         {
             transitionTimer += Time.deltaTime;
             float t = Mathf.Clamp01(transitionTimer / transitionDuration);
 
-            // Lerp position and rotation
-            transform.position = Vector3.Lerp(startPos, targetPos, t);
+            // Recalculate the current target position so the camera follows the player's movement
+            Vector3 currentTargetPos = is2D
+                ? player.position + offset2D
+                : player.position + offset3D;
+
+            // Lerp from the startPos to the (constantly updated) current target
+            transform.position = Vector3.Lerp(startPos, currentTargetPos, t);
+
+            // Slerp rotation from startRot to the final 2D or 3D rotation
             transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
 
-            // If finished
+            // End transition if time has elapsed
             if (t >= 1f)
             {
                 isTransitioning = false;
@@ -74,33 +80,32 @@ public class CameraToggle : MonoBehaviour
     {
         if (player == null)
         {
-            Debug.LogWarning("No player assigned to the camera.");
+            Debug.LogWarning("No player assigned to the camera. Transition canceled.");
             return;
         }
 
         isTransitioning = true;
         transitionTimer = 0f;
 
-        // Save current position/rotation
+        // Capture the camera's position & rotation at the start
         startPos = transform.position;
         startRot = transform.rotation;
 
-        // Decide target position/rotation
+        // Decide target rotation (top-down for 2D, original for 3D)
         if (to2D)
         {
-            targetPos = player.position + offset2D;
-            targetRot = Quaternion.Euler(90f, 0f, 0f); // top-down
+            targetRot = Quaternion.Euler(90f, 0f, 0f);
         }
         else
         {
-            targetPos = player.position + offset3D;
-            targetRot = originalRotation; // original 3D rotation
+            targetRot = originalRotation;
         }
     }
 
-    // Keep following the player if we’re not transitioning
     void LateUpdate()
     {
+        // If we're NOT in transition, directly follow the player.
+        // This ensures the camera stays locked at the correct offset.
         if (!isTransitioning && player != null)
         {
             if (is2D)
