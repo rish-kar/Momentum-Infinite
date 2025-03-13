@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="966baf19-545a-460a-a086-81ce770b17f0" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Momentum - Infinite/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Momentum - Infinite/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Primary Library/Scripts/CameraToggle.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Primary Library/Scripts/CameraToggle.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
