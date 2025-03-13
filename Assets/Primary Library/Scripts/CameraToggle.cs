@@ -6,7 +6,7 @@ public class CameraToggle : MonoBehaviour
     public Transform player;
 
     // Offsets for 3D and 2D modes
-    public Vector3 offset3D = new Vector3(0f, 1.93f, -4.9f);
+    public Vector3 offset3D = new Vector3(0f, 10f, -10f);
     public Vector3 offset2D = new Vector3(0f, 16f, 0f);
 
     // The camera's initial rotation for 3D mode
