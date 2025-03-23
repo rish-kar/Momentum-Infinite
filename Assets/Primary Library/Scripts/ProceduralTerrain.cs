@@ -81,7 +81,7 @@ public class ProceduralTerrain : MonoBehaviour
     private void StartSpawning()
     {
         //Debug.Log("Time Check ===== " + Time.time);
-        _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + 100));
+        _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + 96));
         //Spawning New Ground
         GameObject _newGround = Instantiate(_ground, _previousGroundLoc, Quaternion.identity);
         
