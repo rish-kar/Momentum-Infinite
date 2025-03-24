@@ -17,6 +17,9 @@ public class ProceduralTerrain : MonoBehaviour
     private GameObject _groundContainer;
     [SerializeField]
     private GameObject _treePrefab;
+    [SerializeField] 
+    private NavMeshSurface navMeshSurface;
+
     
     //Stop Condition incase of player death
     public bool _stopSpawningTerrain = false;
@@ -34,6 +37,10 @@ public class ProceduralTerrain : MonoBehaviour
     //New Ground Data
     private float _newgroundZAxis;
     private float _newgroundXAxis;
+    
+    
+    private float nextNavMeshUpdate;
+    private float navMeshUpdateInterval = 1.0f; // rebuild every 1 second
 
     private void Awake()
     {
@@ -75,6 +82,13 @@ public class ProceduralTerrain : MonoBehaviour
             _canFire = Time.time + _timeRate; //Time Control Formula
             StartSpawning(); //Spawn Function
         }
+        
+        if (Time.time >= nextNavMeshUpdate)
+        {
+            UpdateNavMeshSurface();
+            nextNavMeshUpdate = Time.time + navMeshUpdateInterval;
+        }
+        
     }
     
     
@@ -95,13 +109,12 @@ public class ProceduralTerrain : MonoBehaviour
         {
             SpawnATree();
         }
-        
     }
 
     public void SpawnATree()
     {
         float treeX = Random.Range(-7.1f, 10.55f);
-       float treeX2 = Random.Range(-7.1f, 10.55f);
+        float treeX2 = Random.Range(-7.1f, 10.55f);
         float treeX3 = Random.Range(-7.1f, 10.55f);
 
       //  Debug.Log("Tree Position : " + treeX);
@@ -113,16 +126,22 @@ public class ProceduralTerrain : MonoBehaviour
 
     }
 
-
-
-    float GetXAxisVal()
+    
+    private void UpdateNavMeshSurface()
     {
-        return _newgroundXAxis;
-    }
+        // Calculate midpoint of spawned terrains based on player's forward position
+        float navMeshLength = 1500f; // large enough to cover several spawned grounds ahead and behind
+        float forwardOffset = navMeshLength / 2f - 100f; // offset forward so it's ahead of the player
 
-    float GetZAxisVal()
-    {
-        return _newgroundZAxis;
+        Vector3 navMeshPosition = new Vector3(
+            0,
+            0,
+            _player.transform.position.z + forwardOffset
+        );
+
+        navMeshSurface.transform.position = navMeshPosition;
+        navMeshSurface.size = new Vector3(600, 20, navMeshLength); // significantly increased size
+
+        navMeshSurface.BuildNavMesh();
     }
-         
 }
