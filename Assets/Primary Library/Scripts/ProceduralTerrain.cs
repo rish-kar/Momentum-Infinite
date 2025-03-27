@@ -19,7 +19,8 @@ public class ProceduralTerrain : MonoBehaviour
     private GameObject _treePrefab;
     [SerializeField] 
     private NavMeshSurface navMeshSurface;
-
+    [SerializeField] 
+    private GhostRunnerAgent ghostRunnerAgent;
     
     //Stop Condition incase of player death
     public bool _stopSpawningTerrain = false;
@@ -108,6 +109,12 @@ public class ProceduralTerrain : MonoBehaviour
         if (_previousGround != null)
         {
             SpawnATree();
+        }
+        
+        // IMPORTANT: update ghost agent's target to the newly spawned terrain
+        if (ghostRunnerAgent != null)
+        {
+            ghostRunnerAgent.SetTarget(_newGround.transform);
         }
     }
 
