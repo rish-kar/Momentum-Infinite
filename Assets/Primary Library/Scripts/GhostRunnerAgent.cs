@@ -1,26 +1,30 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class GhostRunnerAgent : MonoBehaviour
 {
-    private Transform _target;
-    private UnityEngine.AI.NavMeshAgent _agent;
+    private NavMeshAgent agent;
+    private Transform target;
 
-    void Start()
+    void Awake()
     {
-        _agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        agent = GetComponent<NavMeshAgent>();
+    }
+
+    public void SetTarget(Transform newTarget)
+    {
+        target = newTarget;
+        if (agent != null && target != null)
+        {
+            agent.SetDestination(target.position);
+        }
     }
 
     void Update()
     {
-        if (_target != null)
+        if (agent != null && target != null && agent.isOnNavMesh)
         {
-            _agent.destination = _target.position;
+            agent.SetDestination(target.position);
         }
-    }
-
-    // Public method to dynamically set the target
-    public void SetTarget(Transform newTarget)
-    {
-        _target = newTarget;
     }
 }

@@ -6,10 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="966baf19-545a-460a-a086-81ce770b17f0" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Momentum - Infinite/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Momentum - Infinite/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Primary Library/Scripts/GhostAgent.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Primary Library/Scripts/GhostAgent.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Primary Library/Scripts/ProceduralTerrain.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Primary Library/Scripts/ProceduralTerrain.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Primary Library/Scripts/GhostRunnerAgent.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Primary Library/Scripts/GhostRunnerAgent.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Primary Library/Scripts/ProceduralTerrain.cs.meta" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Primary Library/Scripts/ProceduralTerrain.cs.meta" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Scenes/Ground Level.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scenes/Ground Level.unity" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ProjectSettings/DynamicsManager.asset" beforeDir="false" afterPath="$PROJECT_DIR$/ProjectSettings/DynamicsManager.asset" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,6 +22,9 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/91aa50f2e703411fbb05bdf5832f909e2ac00/cf/fc0bfd42/RigidbodyConstraints.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Primary Library/Scripts/Score.cs" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="Toolset" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
@@ -47,7 +50,7 @@
 }</component>
   <component name="RunManager" selected="Attach to Unity Editor.Attach to Unity Editor">
     <configuration name="Start Unity" type="RunUnityExe" factoryName="Unity Executable">
-      <option name="EXE_PATH" value="C:\Program Files\Unity\Hub\Editor\6000.0.35f1-x86_64\Editor\Unity.exe" />
+      <option name="EXE_PATH" value="C:\Program Files\Unity\Hub\Editor\6000.0.35f1\Editor\Unity.exe" />
       <option name="PROGRAM_PARAMETERS" value="-projectPath &quot;C:\Users\rkoff\OneDrive - King's College London\Workspace\Projects\MSc Individual Project\Repositories\Momentum - Infinite&quot; -debugCodeOptimization" />
       <option name="WORKING_DIRECTORY" value="C:\Users\rkoff\OneDrive - King's College London\Workspace\Projects\MSc Individual Project\Repositories\Momentum - Infinite" />
       <option name="PASS_PARENT_ENVS" value="1" />
@@ -55,7 +58,7 @@
       <method v="2" />
     </configuration>
     <configuration name="Unit Tests (batch mode)" type="RunUnityExe" factoryName="Unity Executable">
-      <option name="EXE_PATH" value="C:\Program Files\Unity\Hub\Editor\6000.0.35f1-x86_64\Editor\Unity.exe" />
+      <option name="EXE_PATH" value="C:\Program Files\Unity\Hub\Editor\6000.0.35f1\Editor\Unity.exe" />
       <option name="PROGRAM_PARAMETERS" value="-runTests -batchmode -projectPath &quot;C:\Users\rkoff\OneDrive - King's College London\Workspace\Projects\MSc Individual Project\Repositories\Momentum - Infinite&quot; -testResults Logs/results.xml -logFile Logs/Editor.log -testPlatform EditMode -debugCodeOptimization" />
       <option name="WORKING_DIRECTORY" value="C:\Users\rkoff\OneDrive - King's College London\Workspace\Projects\MSc Individual Project\Repositories\Momentum - Infinite" />
       <option name="PASS_PARENT_ENVS" value="1" />
@@ -102,6 +105,11 @@
       <workItem from="1742092095854" duration="4304000" />
       <workItem from="1742754652748" duration="14276000" />
       <workItem from="1742940468549" duration="1185000" />
+      <workItem from="1743092378969" duration="1129000" />
+      <workItem from="1743169841165" duration="1617000" />
+      <workItem from="1743460969569" duration="1101000" />
+      <workItem from="1747684110666" duration="591000" />
+      <workItem from="1747770502327" duration="767000" />
     </task>
     <servers />
   </component>
