@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class ProceduralTerrain : MonoBehaviour
 {
@@ -15,43 +17,86 @@ public class ProceduralTerrain : MonoBehaviour
     private GameObject _groundContainer;
     [SerializeField]
     private GameObject _treePrefab;
-
+    [SerializeField] 
+    private NavMeshSurface navMeshSurface;
+    [SerializeField] 
+    private GhostRunnerAgent ghostRunnerAgent;
+    
     //Stop Condition incase of player death
     public bool _stopSpawningTerrain = false;
 
     //Positions of Ground
     private Vector3 _previousGroundLoc;
     private Vector3 _positionOfGround;
-    private float _playerPos;
-
-    //Count Variable
-    private int _count = 1;
 
     //Time Control Variables
     [SerializeField]
     private float _canFire = -1f;
     [SerializeField]
-    private float _timeRate = 2f;
+    private float _timeRate = 1f;
 
     //New Ground Data
     private float _newgroundZAxis;
     private float _newgroundXAxis;
     
+    
+    private float nextNavMeshUpdate;
+    private float navMeshUpdateInterval = 1.0f; // rebuild every 1 second
+
     private void Awake()
     {
-        // If _player is not assigned via Inspector, find it by tag.
+        // If values not assigned by inspector, find them by tag
         if (_player == null)
         {
             _player = GameObject.FindGameObjectWithTag("Player");
         }
-    
-        // Other initialization code...
+        
+        _previousGround = GameObject.FindGameObjectWithTag("Initial Ground");
+
+        if (_groundContainer == null)
+        {
+            _groundContainer = GameObject.FindGameObjectWithTag("Ground Container");
+        }
+
+        if (_treePrefab == null)
+        {
+            _treePrefab = GameObject.FindGameObjectWithTag("Environment Objects");
+        }
     }
 
-    public void StartSpawning()
+    
+    void Update()
+    {
+        _positionOfGround = _previousGround.transform.position;
+        
+        if(_positionOfGround.z > _player.transform.position.z + 1000)
+        {
+            _stopSpawningTerrain = true;
+        }
+        else
+        {
+            _stopSpawningTerrain = false;
+        }
+        
+        if (Time.time > _canFire && _stopSpawningTerrain == false)    // restricts spawning
+        {
+            _canFire = Time.time + _timeRate; //Time Control Formula
+            StartSpawning(); //Spawn Function
+        }
+        
+        if (Time.time >= nextNavMeshUpdate)
+        {
+            UpdateNavMeshSurface();
+            nextNavMeshUpdate = Time.time + navMeshUpdateInterval;
+        }
+        
+    }
+    
+    
+    private void StartSpawning()
     {
         //Debug.Log("Time Check ===== " + Time.time);
-        _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + 100));
+        _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + 96));
         //Spawning New Ground
         GameObject _newGround = Instantiate(_ground, _previousGroundLoc, Quaternion.identity);
         
@@ -59,20 +104,24 @@ public class ProceduralTerrain : MonoBehaviour
         _newgroundXAxis = _newGround.transform.position.x;
 
         _newGround.transform.parent = _groundContainer.transform;   //Putting spawned grounds into an empty container
-        _count++;
         _previousGround = _newGround; //Swap Logic
         
         if (_previousGround != null)
         {
             SpawnATree();
         }
-
+        
+        // IMPORTANT: update ghost agent's target to the newly spawned terrain
+        if (ghostRunnerAgent != null)
+        {
+            ghostRunnerAgent.SetTarget(_newGround.transform);
+        }
     }
 
     public void SpawnATree()
     {
         float treeX = Random.Range(-7.1f, 10.55f);
-       float treeX2 = Random.Range(-7.1f, 10.55f);
+        float treeX2 = Random.Range(-7.1f, 10.55f);
         float treeX3 = Random.Range(-7.1f, 10.55f);
 
       //  Debug.Log("Tree Position : " + treeX);
@@ -84,26 +133,22 @@ public class ProceduralTerrain : MonoBehaviour
 
     }
 
-    void Update()
+    
+    private void UpdateNavMeshSurface()
     {
-        _positionOfGround = _previousGround.transform.position;
-        _playerPos = _player.transform.position.z;
-                
-        if (Time.time > _canFire && _stopSpawningTerrain == false)    // restricts spawning
-        {
-            _canFire = Time.time + _timeRate; //Time Control Formula
-            StartSpawning(); //Spawn Function
-        }
-    }
+        // Calculate midpoint of spawned terrains based on player's forward position
+        float navMeshLength = 1500f; // large enough to cover several spawned grounds ahead and behind
+        float forwardOffset = navMeshLength / 2f - 100f; // offset forward so it's ahead of the player
 
-    float GetXAxisVal()
-    {
-        return _newgroundXAxis;
-    }
+        Vector3 navMeshPosition = new Vector3(
+            0,
+            0,
+            _player.transform.position.z + forwardOffset
+        );
 
-    float GetZAxisVal()
-    {
-        return _newgroundZAxis;
+        navMeshSurface.transform.position = navMeshPosition;
+        navMeshSurface.size = new Vector3(600, 20, navMeshLength); // significantly increased size
+
+        navMeshSurface.BuildNavMesh();
     }
-         
 }

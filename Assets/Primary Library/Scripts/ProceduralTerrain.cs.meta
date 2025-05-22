@@ -4,9 +4,17 @@ MonoImporter:
   externalObjects: {}
   serializedVersion: 2
   defaultReferences:
-  - _ground: {fileID: 14402216545190703, guid: b81d5397daa92094f8028445840f96b8, type: 3}
+  - _ground: {fileID: 2684501641573772601, guid: fe9c9fb6527966347a78d278cc042dc5,
+      type: 3}
   - _previousGround: {fileID: 2684501641573772601, guid: fe9c9fb6527966347a78d278cc042dc5,
       type: 3}
+  - _player: {fileID: 8685838845781376928, guid: d3ca457a4a8387d4a93a5cd0b855ddb1,
+      type: 3}
+  - _groundContainer: {instanceID: 0}
+  - _treePrefab: {fileID: 6623987512302700719, guid: 3b32d91022ba3ec4281b5e6172977588,
+      type: 3}
+  - navMeshSurface: {instanceID: 0}
+  - ghostRunnerAgent: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
