@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+>
+    <engine:VisualElement name="TerrainList">
+        <engine:VisualElement name="Desert Dunes" description="Sandy dunes and open desert." />
+        <engine:VisualElement name="Oasis Paradise" description="Palm trees, water pools, and flowers." />
+        <engine:VisualElement name="Rocky Canyons" description="Canyons, stone bridges, plateaus." />
+        <engine:VisualElement name="Volcanic Wasteland" description="Lava rivers, ash, cracked earth." />
+        <engine:VisualElement name="Savanna Grasslands" description="Tall golden grass, acacia trees." />
+        <engine:VisualElement name="Rainforest Jungle" description="Dense foliage, vines, ruins." />
+        <engine:VisualElement name="Swamp Mangrove" description="Muddy ground, shallow water, roots." />
+        <engine:VisualElement name="Crystal Caverns" description="Glowing crystals, reflective surfaces." />
+        <engine:VisualElement name="Icy Tundra" description="Snow drifts, icy patches, frozen lakes." />
+        <engine:VisualElement name="Mountain Highlands" description="Cliffs, snowcaps, waterfalls." />
+        <engine:VisualElement name="Futuristic Neon City" description="Hover platforms, neon lights, holograms." />
+        <engine:VisualElement name="Floating Islands" description="Low gravity, clouds, waterfalls." />
+        <engine:VisualElement name="Haunted Forest" description="Twisted trees, fog, glowing eyes." />
+        <engine:VisualElement name="Coral Reef" description="Underwater, corals, fish, currents." />
+        <engine:VisualElement name="Ancient Ruins" description="Overgrown temples, statues, traps." />
+        <engine:VisualElement name="Cursed Graveyard" description="Tombstones, ghosts, broken fences." />
+        <engine:VisualElement name="Steam-Powered Factory" description="Gears, conveyor belts, steam vents." />
+        <engine:VisualElement name="Candy Land" description="Giant sweets, syrup rivers, cake hills." />
+        <engine:VisualElement name="Alien Planet" description="Strange plants, floating rocks, purple skies." />
+        <engine:VisualElement name="Sunset Meadows" description="Rolling hills, windmills, wildflowers." />
+        <engine:VisualElement name="Lush Bamboo Grove" description="Tall bamboo, mist, small streams." />
+        <engine:VisualElement name="Frozen Glacier Fields" description="Blue ice, crevasses, snow mounds." />
+        <engine:VisualElement name="Mushroom Forest" description="Giant mushrooms, spores, glowing fungi." />
+        <engine:VisualElement name="Clockwork Citadel" description="Moving gears, ticking clocks, metallic platforms." />
+        <engine:VisualElement name="Mirror Lake" description="Crystal-clear water, reflections, floating lilies." />
+    </engine:VisualElement>
+</engine:UXML>
