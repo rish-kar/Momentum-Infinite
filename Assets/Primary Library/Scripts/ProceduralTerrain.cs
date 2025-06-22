@@ -123,10 +123,7 @@ public class ProceduralTerrain : MonoBehaviour
         float treeX = Random.Range(-7.1f, 10.55f);
         float treeX2 = Random.Range(-7.1f, 10.55f);
         float treeX3 = Random.Range(-7.1f, 10.55f);
-
-      //  Debug.Log("Tree Position : " + treeX);
-       // Debug.Log("Tree 2 Position : " + treeX2);
-        //Debug.Log("Tree 3 Position : " + treeX3);
+        
         //(_treePrefab, new Vector3(treeX, 0.4326f, Random.Range(_newgroundZAxis-5.0f,_newgroundZAxis+5.0f)), Quaternion.identity);
         Instantiate(_treePrefab, new Vector3(treeX2, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
         Instantiate(_treePrefab, new Vector3(treeX3, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
@@ -136,6 +133,16 @@ public class ProceduralTerrain : MonoBehaviour
     
     private void UpdateNavMeshSurface()
     {
+
+        if (navMeshSurface == null)
+        {
+            GameObject navMeshObj = GameObject.FindGameObjectWithTag("Navigational Mesh");
+            if (navMeshObj != null)
+            {
+                navMeshSurface = navMeshObj.GetComponent<NavMeshSurface>();
+            }
+        }
+        
         // Calculate midpoint of spawned terrains based on player's forward position
         float navMeshLength = 1500f; // large enough to cover several spawned grounds ahead and behind
         float forwardOffset = navMeshLength / 2f - 100f; // offset forward so it's ahead of the player
