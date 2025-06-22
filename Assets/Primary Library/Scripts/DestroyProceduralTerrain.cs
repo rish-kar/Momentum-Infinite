@@ -31,7 +31,7 @@ public class DestroyProceduralTerrain : MonoBehaviour
         _playerPos = playerMovement.ReturnZAxis();
         _previousGroundLoc = _previousGround.transform.position.z + 100;
        
-        if (_playerPos > _previousGroundLoc)
+        if (_playerPos > _previousGroundLoc + 400)
         {
             DestroyGround();
         }     

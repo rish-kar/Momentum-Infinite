@@ -3,8 +3,7 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    [SerializeField] private float baseSpeed = 50f;
+    [Header("Physics Related Fields")] private float baseSpeed = 50f;
     [SerializeField] private float maxSpeed = 300f;
     [SerializeField] private float acceleration = 2f;
     [SerializeField] private float forwardForceMultiplier = 0.5f; // Adjust this multiplier to reduce forward force
@@ -13,18 +12,36 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpForwardBoost = 200f;
     [SerializeField] private float jumpCooldown = 2f;
 
-    [Header("References")]
-    [SerializeField] private Rigidbody rb;
+
+    [Header("Object References")] [SerializeField]
+    private Rigidbody rb;
+
+
     [SerializeField] private Animator anim;
 
-    [Header("Environment Tracking")]
-    [SerializeField] private int environmentUpdateInterval = 150;
+
+    [Header("Environment Tracking")] [SerializeField]
+    private int environmentUpdateInterval = 150;
+
     private int nextEnvironmentUpdate;
-    
-    private bool isJumping;
+
+
+    [Header("Respawn Settings")] [SerializeField]
+    private int maxRespawns = 3; // Maximum number of respawns allowed
+
+    private int respawnCount;
+    private GameObject lastGroundBeforeDeath;
+    [SerializeField] private GameObject respawnScreen;
+    private bool isDeadOrRespawning = false;
+    private bool hasTriggeredDeathAnimation = false;
+
+
+    [Header("Flags")] [SerializeField] private bool isJumping;
     private float currentSpeed;
     private bool isRunning;
     private float horizontalInput;
+
+    // --------------------------- Unity Methods ---------------------------
 
     private void Awake()
     {
@@ -37,7 +54,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!rb) rb = GetComponent<Rigidbody>();
         if (!anim) TryGetComponent(out anim);
-        
+
         rb.constraints = RigidbodyConstraints.FreezeRotation;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
@@ -53,6 +70,10 @@ public class PlayerMovement : MonoBehaviour
     {
         HandleMovement();
     }
+
+
+    // --------------------------- Movement Related Methods ---------------------------
+
 
     private void HandleInput()
     {
@@ -99,28 +120,33 @@ public class PlayerMovement : MonoBehaviour
     private IEnumerator PerformJump()
     {
         isJumping = true;
-        
+
         // Initial jump force
         rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
         rb.AddForce(Vector3.forward * jumpForwardBoost, ForceMode.Impulse);
-        
+
         // Trigger jump animation
         if (anim) anim.SetTrigger("isJumping");
-        
+
         yield return new WaitForSeconds(jumpCooldown);
         isJumping = false;
     }
 
+    public float ReturnZAxis() => transform.position.z;
+
     private void UpdateAnimations()
     {
         if (!anim) return;
-        
+
         anim.SetBool("isRunning", isRunning);
-        
+
         // Falling animation
         float yPos = transform.position.y;
         anim.SetBool("isFalling", yPos < -1f && yPos >= -170f);
     }
+
+
+    // --------------------------- Environment Updates ---------------------------
 
     private void UpdateEnvironmentTracking()
     {
@@ -132,17 +158,88 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+
+    // --------------------------- Respawn and Death Logic ---------------------------
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        // Track the last ground prefab the player was on
+        if (collision.gameObject.CompareTag("Procedural Ground"))
+        {
+            lastGroundBeforeDeath = collision.gameObject;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        // Track the last procedural ground when the player leaves it
+        if (other.CompareTag("Procedural Ground"))
+        {
+            lastGroundBeforeDeath = other.gameObject;
+        }
+    }
+
+
     public void CheckDeathCondition()
     {
-        if (transform.position.y < -170f)
+        if (isDeadOrRespawning) return;
+
+        // It is extremely important to only respawn between a particular position in the Y-Axis
+        // because this prevents the respawning logic from being continuously triggered
+        // at every frame until reset triggering multiple respawns on a single death.
+        // Debugging Time on this Minor Issue: >24 hours (still needs testing)
+        if (transform.position.y < -10f && transform.position.y > -10.5f )
         {
-            if (anim)
+            isDeadOrRespawning = true; // lock immediately
+
+            if (respawnCount < maxRespawns)
             {
-                anim.SetBool("isFalling", false);
-                anim.SetTrigger("Crash");
+                StartCoroutine(RespawnSequence());
+            }
+            else
+            {
+                TriggerDeathAnimation();
             }
         }
     }
 
-    public float ReturnZAxis() => transform.position.z;
+    private IEnumerator RespawnSequence()
+    {
+        if (isDeadOrRespawning)
+        {
+            // 1.  optional UI
+            if (respawnScreen) respawnScreen.SetActive(true);
+            yield return new WaitForSeconds(0f);
+
+            // 2.  move to last safe ground
+            if (lastGroundBeforeDeath != null)
+            {
+                Vector3 p = lastGroundBeforeDeath.transform.position;
+                transform.position = new Vector3(p.x, p.y + 2f, p.z);
+            }
+
+            // 3.  ***reset physics***  (the real bug-fix)
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // 4.  hide UI & unlock
+            isDeadOrRespawning = false;
+            respawnCount++;
+
+
+            Debug.Log($"Respawned player at: {transform.position}");
+        }
+    }
+
+    private void TriggerDeathAnimation()
+    {
+        if (hasTriggeredDeathAnimation) return;
+        hasTriggeredDeathAnimation = true;
+
+        // Hide respawn screen (if up)
+        if (respawnScreen) respawnScreen.SetActive(false);
+
+        FindObjectOfType<GameManager>().GameEnds();
+        // Lock remains forever, no further respawns
+    }
 }

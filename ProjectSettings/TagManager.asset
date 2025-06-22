@@ -4,11 +4,13 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - Crypto
   - Procedural Ground
   - Ground Container
   - Environment Objects
   - Initial Ground
+  - UI Component
+  - Background Graphics
+  - Navigational Mesh
   layers:
   - Default
   - TransparentFX
