@@ -6,70 +6,81 @@ using UnityEngine.AI;
 
 public class ProceduralTerrain : MonoBehaviour
 {
-    //GameObjects Spawn
-    [SerializeField]
+    [Header("Terrain Settings")] [SerializeField]
     private GameObject _ground;
-    [SerializeField]
-    private GameObject _previousGround;
-    [SerializeField]
-    private GameObject _player;
-    [SerializeField]
-    private GameObject _groundContainer;
-    [SerializeField]
-    private GameObject _treePrefab;
-    [SerializeField] 
-    private NavMeshSurface navMeshSurface;
-    [SerializeField] 
-    private GhostRunnerAgent ghostRunnerAgent;
-    
-    //Stop Condition incase of player death
-    public bool _stopSpawningTerrain = false;
 
-    //Positions of Ground
+    [SerializeField] private GameObject _previousGround;
+    [SerializeField] private GameObject _groundContainer;
+    [SerializeField] private GameObject _treePrefab;
+    public bool _stopSpawningTerrain = false;
+    private float _newgroundZAxis;
+    private float _newgroundXAxis;
     private Vector3 _previousGroundLoc;
     private Vector3 _positionOfGround;
 
-    //Time Control Variables
-    [SerializeField]
-    private float _canFire = -1f;
-    [SerializeField]
-    private float _timeRate = 1f;
 
-    //New Ground Data
-    private float _newgroundZAxis;
-    private float _newgroundXAxis;
-    
-    
+    [Header("Agents and Player")] [SerializeField]
+    private GhostRunnerAgent ghostRunnerAgent;
+
+    [SerializeField] private GameObject _player;
+
+
+    [Header("Time Control")] [SerializeField]
+    private float _canFire = -1f;
+
+    [SerializeField] private float _timeRate = 1f;
+
+
+    [Header("NavMesh Settings")] [SerializeField]
+    private NavMeshSurface navMeshSurface;
+
     private float nextNavMeshUpdate;
+    private NavMeshData bakedNavMesh;
+    private NavMeshDataInstance meshInstance;
+    private AsyncOperation bakeJob;
+    private int tilesSinceLastBake;
+    private const int bakeInterval = 5; // bake every 5 tiles
+
+
     private float navMeshUpdateInterval = 1.0f; // rebuild every 1 second
 
     private void Awake()
     {
-        // If values not assigned by inspector, find them by tag
-        if (_player == null)
+        // Null checks and Initialize Reference Block
         {
-            _player = GameObject.FindGameObjectWithTag("Player");
-        }
-        
-        _previousGround = GameObject.FindGameObjectWithTag("Initial Ground");
+            if (_player == null)
+            {
+                _player = GameObject.FindGameObjectWithTag("Player");
+            }
 
-        if (_groundContainer == null)
-        {
-            _groundContainer = GameObject.FindGameObjectWithTag("Ground Container");
+            _previousGround = GameObject.FindGameObjectWithTag("Initial Ground");
+
+            if (_groundContainer == null)
+            {
+                _groundContainer = GameObject.FindGameObjectWithTag("Ground Container");
+            }
+
+            if (_treePrefab == null)
+            {
+                _treePrefab = GameObject.FindGameObjectWithTag("Environment Objects");
+            }
         }
 
-        if (_treePrefab == null)
+        // Object Instantiation Block 
         {
-            _treePrefab = GameObject.FindGameObjectWithTag("Environment Objects");
+            bakedNavMesh = new NavMeshData();
+            meshInstance = NavMesh.AddNavMeshData(bakedNavMesh);
+            UpdateNavMeshSurface();   // position & size the surface once
+            navMeshSurface.BuildNavMesh();   // synchronous, happens only here
         }
     }
 
-    
+
     void Update()
     {
         _positionOfGround = _previousGround.transform.position;
-        
-        if(_positionOfGround.z > _player.transform.position.z + 1000)
+
+        if (_positionOfGround.z > _player.transform.position.z + 1000)
         {
             _stopSpawningTerrain = true;
         }
@@ -77,44 +88,50 @@ public class ProceduralTerrain : MonoBehaviour
         {
             _stopSpawningTerrain = false;
         }
-        
-        if (Time.time > _canFire && _stopSpawningTerrain == false)    // restricts spawning
+
+        if (Time.time > _canFire && _stopSpawningTerrain == false) // restricts spawning
         {
             _canFire = Time.time + _timeRate; //Time Control Formula
             StartSpawning(); //Spawn Function
         }
-        
+
         if (Time.time >= nextNavMeshUpdate)
         {
             UpdateNavMeshSurface();
             nextNavMeshUpdate = Time.time + navMeshUpdateInterval;
         }
-        
     }
-    
-    
+
+
     private void StartSpawning()
     {
         //Debug.Log("Time Check ===== " + Time.time);
         _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + 96));
         //Spawning New Ground
         GameObject _newGround = Instantiate(_ground, _previousGroundLoc, Quaternion.identity);
-        
+
         _newgroundZAxis = _newGround.transform.position.z;
         _newgroundXAxis = _newGround.transform.position.x;
 
-        _newGround.transform.parent = _groundContainer.transform;   //Putting spawned grounds into an empty container
+        _newGround.transform.parent = _groundContainer.transform; //Putting spawned grounds into an empty container
         _previousGround = _newGround; //Swap Logic
-        
+
         if (_previousGround != null)
         {
             SpawnATree();
         }
-        
+
         // IMPORTANT: update ghost agent's target to the newly spawned terrain
         if (ghostRunnerAgent != null)
         {
             ghostRunnerAgent.SetTarget(_newGround.transform);
+        }
+        
+        tilesSinceLastBake++;
+        if (tilesSinceLastBake >= bakeInterval)
+        {
+            tilesSinceLastBake = 0;
+            StartCoroutine(RebuildNavmeshAsync());   // this calls the coroutine below
         }
     }
 
@@ -123,17 +140,15 @@ public class ProceduralTerrain : MonoBehaviour
         float treeX = Random.Range(-7.1f, 10.55f);
         float treeX2 = Random.Range(-7.1f, 10.55f);
         float treeX3 = Random.Range(-7.1f, 10.55f);
-        
-        //(_treePrefab, new Vector3(treeX, 0.4326f, Random.Range(_newgroundZAxis-5.0f,_newgroundZAxis+5.0f)), Quaternion.identity);
-        Instantiate(_treePrefab, new Vector3(treeX2, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
-        Instantiate(_treePrefab, new Vector3(treeX3, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
 
+        //(_treePrefab, new Vector3(treeX, 0.4326f, Random.Range(_newgroundZAxis-5.0f,_newgroundZAxis+5.0f)), Quaternion.identity);
+        // Instantiate(_treePrefab, new Vector3(treeX2, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
+        // Instantiate(_treePrefab, new Vector3(treeX3, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
     }
 
-    
+
     private void UpdateNavMeshSurface()
     {
-
         if (navMeshSurface == null)
         {
             GameObject navMeshObj = GameObject.FindGameObjectWithTag("Navigational Mesh");
@@ -142,7 +157,7 @@ public class ProceduralTerrain : MonoBehaviour
                 navMeshSurface = navMeshObj.GetComponent<NavMeshSurface>();
             }
         }
-        
+
         // Calculate midpoint of spawned terrains based on player's forward position
         float navMeshLength = 1500f; // large enough to cover several spawned grounds ahead and behind
         float forwardOffset = navMeshLength / 2f - 100f; // offset forward so it's ahead of the player
@@ -156,6 +171,27 @@ public class ProceduralTerrain : MonoBehaviour
         navMeshSurface.transform.position = navMeshPosition;
         navMeshSurface.size = new Vector3(600, 20, navMeshLength); // significantly increased size
 
-        navMeshSurface.BuildNavMesh();
+        // navMeshSurface.BuildNavMesh();
+    }
+    
+    IEnumerator RebuildNavmeshAsync()
+    {
+        if (bakeJob != null && !bakeJob.isDone) yield break;   // still baking
+
+        var sources = new List<NavMeshBuildSource>();
+        NavMeshBuilder.CollectSources(
+            navMeshSurface.transform, navMeshSurface.layerMask,
+            navMeshSurface.useGeometry, navMeshSurface.defaultArea,
+            new List<NavMeshBuildMarkup>(), sources);
+
+        var bounds = new Bounds(navMeshSurface.transform.position, navMeshSurface.size);
+
+        bakeJob = NavMeshBuilder.UpdateNavMeshDataAsync(
+            bakedNavMesh,
+            navMeshSurface.GetBuildSettings(),
+            sources,
+            bounds);          // name arg → picks Bounds overload
+
+        while (!bakeJob.isDone) yield return null;  // main thread stays free
     }
 }
