@@ -17,6 +17,8 @@ public class SkyboxChanger : MonoBehaviour
     [Header("Assets (drag-in lists, same order!)")]
     [SerializeField] private List<Material>  skyboxes   = new(); // 6 mats
     [SerializeField] private List<VideoClip> videoClips = new(); // 6 clips
+    public int CurrentSkyboxIdx { get; private set; }   // ← NEW
+
 
     /* ── private state ───────────────────────────────────────── */
     readonly Stack<int> used = new();    // store index so skybox = clip
@@ -42,6 +44,7 @@ public class SkyboxChanger : MonoBehaviour
         DynamicGI.UpdateEnvironment();
         used.Push(i0);
 
+        CurrentSkyboxIdx = i0;
         nextSwapZ = distanceInterval;
     }
 
@@ -53,6 +56,7 @@ public class SkyboxChanger : MonoBehaviour
         {
             nextSwapZ += distanceInterval;
             int ix = PickNextIndex();
+            CurrentSkyboxIdx = ix; // ← update current index
 
             // prepare clip first, then fade skybox when ready
             StartCoroutine(VideoPreloader.SwapWhenReady(

@@ -3,6 +3,7 @@
 
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.fbx filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
 /Assets/Asset[[:space:]]Store[[:space:]]Data/PBS[[:space:]]Materials[[:space:]]Variety[[:space:]]Pack/Hex[[:space:]]Lattice/hexagonal[[:space:]]lattice_Textures/07/lattice_07_normal_direct_x.tif filter=lfs diff=lfs merge=lfs -text
 /Assets/Asset[[:space:]]Store[[:space:]]Data/PBS[[:space:]]Materials[[:space:]]Variety[[:space:]]Pack/Hex[[:space:]]Lattice/hexagonal[[:space:]]lattice_Textures/07/lattice_07_normal_open_gl.tif filter=lfs diff=lfs merge=lfs -text
 /Assets/Asset[[:space:]]Store[[:space:]]Data/PBS[[:space:]]Materials[[:space:]]Variety[[:space:]]Pack/Hex[[:space:]]Lattice/hexagonal[[:space:]]lattice_Textures/08/lattice_08_normal_direct_x.tif filter=lfs diff=lfs merge=lfs -text
@@ -25,3 +26,10 @@
 /Assets/Primary[[:space:]]Library/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_Normal_DirectX.tga filter=lfs diff=lfs merge=lfs -text
 /Assets/Primary[[:space:]]Library/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_Normal_OpenGL.tga filter=lfs diff=lfs merge=lfs -text
 /Assets/Primary[[:space:]]Library/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_OcclusionRoughnessMetallic.tga filter=lfs diff=lfs merge=lfs -text
+/Assets/Resources/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_ao.psd filter=lfs diff=lfs merge=lfs -text
+/Assets/Resources/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_BaseColor.tga filter=lfs diff=lfs merge=lfs -text
+/Assets/Resources/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_Emissive.tga filter=lfs diff=lfs merge=lfs -text
+/Assets/Resources/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_MetallicSmoothness.tga filter=lfs diff=lfs merge=lfs -text
+/Assets/Resources/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_Normal_DirectX.tga filter=lfs diff=lfs merge=lfs -text
+/Assets/Resources/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_Normal_OpenGL.tga filter=lfs diff=lfs merge=lfs -text
+/Assets/Resources/Prefabs/Shuffled[[:space:]]Prefabs/Variant[[:space:]]5/Cage/textures/cage_low_cage_OcclusionRoughnessMetallic.tga filter=lfs diff=lfs merge=lfs -text

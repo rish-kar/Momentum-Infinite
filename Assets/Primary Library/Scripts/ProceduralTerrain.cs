@@ -44,6 +44,10 @@ public class ProceduralTerrain : MonoBehaviour
 
     private float navMeshUpdateInterval = 1.0f; // rebuild every 1 second
 
+
+    [Header("Script References")] [SerializeField]
+    private SkyboxChanger skyboxChanger;
+
     private void Awake()
     {
         // Null checks and Initialize Reference Block
@@ -70,8 +74,8 @@ public class ProceduralTerrain : MonoBehaviour
         {
             bakedNavMesh = new NavMeshData();
             meshInstance = NavMesh.AddNavMeshData(bakedNavMesh);
-            UpdateNavMeshSurface();   // position & size the surface once
-            navMeshSurface.BuildNavMesh();   // synchronous, happens only here
+            UpdateNavMeshSurface(); // position & size the surface once
+            navMeshSurface.BuildNavMesh(); // synchronous, happens only here
         }
     }
 
@@ -107,8 +111,29 @@ public class ProceduralTerrain : MonoBehaviour
     {
         //Debug.Log("Time Check ===== " + Time.time);
         _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + 96));
+
+        if (skyboxChanger == null)
+            skyboxChanger = FindObjectOfType<SkyboxChanger>();
+
+        int variantIdx = skyboxChanger ? skyboxChanger.CurrentSkyboxIdx : 0;
+
+        /* -------- choose ground that matches the current skybox -------- */
+        int idx = skyboxChanger ? skyboxChanger.CurrentSkyboxIdx : 0; // 0-6
+        string path = $"Prefabs/Shuffled Prefabs/Variant {variantIdx}/Ground_{variantIdx}";
+        Debug.Log($"Loading ground prefab from path: {path}");
+        GameObject groundPrefab = Resources.Load<GameObject>(path);
+        if (groundPrefab == null)
+        {
+            Debug.LogError($"Ground prefab not found at {path}");
+            groundPrefab = _ground; // fall back to whatever was set
+        }
+
+
         //Spawning New Ground
-        GameObject _newGround = Instantiate(_ground, _previousGroundLoc, Quaternion.identity);
+        GameObject _newGround = Instantiate(groundPrefab, _previousGroundLoc, Quaternion.identity);
+
+        var mgr = FindObjectOfType<EnvironmentObjectSpawnManager>();
+        if (mgr) mgr.SpawnObjectsOnGround(_newGround);
 
         _newgroundZAxis = _newGround.transform.position.z;
         _newgroundXAxis = _newGround.transform.position.x;
@@ -118,7 +143,7 @@ public class ProceduralTerrain : MonoBehaviour
 
         if (_previousGround != null)
         {
-            SpawnATree();
+            // SpawnATree();
         }
 
         // IMPORTANT: update ghost agent's target to the newly spawned terrain
@@ -126,25 +151,25 @@ public class ProceduralTerrain : MonoBehaviour
         {
             ghostRunnerAgent.SetTarget(_newGround.transform);
         }
-        
+
         tilesSinceLastBake++;
         if (tilesSinceLastBake >= bakeInterval)
         {
             tilesSinceLastBake = 0;
-            StartCoroutine(RebuildNavmeshAsync());   // this calls the coroutine below
+            StartCoroutine(RebuildNavmeshAsync()); // this calls the coroutine below
         }
     }
 
-    public void SpawnATree()
-    {
-        float treeX = Random.Range(-7.1f, 10.55f);
-        float treeX2 = Random.Range(-7.1f, 10.55f);
-        float treeX3 = Random.Range(-7.1f, 10.55f);
-
-        //(_treePrefab, new Vector3(treeX, 0.4326f, Random.Range(_newgroundZAxis-5.0f,_newgroundZAxis+5.0f)), Quaternion.identity);
-        // Instantiate(_treePrefab, new Vector3(treeX2, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
-        // Instantiate(_treePrefab, new Vector3(treeX3, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
-    }
+    // public void SpawnATree()
+    // {
+    //     float treeX = Random.Range(-7.1f, 10.55f);
+    //     float treeX2 = Random.Range(-7.1f, 10.55f);
+    //     float treeX3 = Random.Range(-7.1f, 10.55f);
+    //
+    //     //(_treePrefab, new Vector3(treeX, 0.4326f, Random.Range(_newgroundZAxis-5.0f,_newgroundZAxis+5.0f)), Quaternion.identity);
+    //     // Instantiate(_treePrefab, new Vector3(treeX2, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
+    //     // Instantiate(_treePrefab, new Vector3(treeX3, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
+    // }
 
 
     private void UpdateNavMeshSurface()
@@ -173,10 +198,10 @@ public class ProceduralTerrain : MonoBehaviour
 
         // navMeshSurface.BuildNavMesh();
     }
-    
+
     IEnumerator RebuildNavmeshAsync()
     {
-        if (bakeJob != null && !bakeJob.isDone) yield break;   // still baking
+        if (bakeJob != null && !bakeJob.isDone) yield break; // still baking
 
         var sources = new List<NavMeshBuildSource>();
         NavMeshBuilder.CollectSources(
@@ -190,8 +215,8 @@ public class ProceduralTerrain : MonoBehaviour
             bakedNavMesh,
             navMeshSurface.GetBuildSettings(),
             sources,
-            bounds);          // name arg → picks Bounds overload
+            bounds); // name arg → picks Bounds overload
 
-        while (!bakeJob.isDone) yield return null;  // main thread stays free
+        while (!bakeJob.isDone) yield return null; // main thread stays free
     }
 }
