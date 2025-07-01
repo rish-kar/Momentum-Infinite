@@ -1,9 +1,11 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.fbx filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.prefab filter=lfs diff=lfs merge=lfs -text
+*.unitypackage filter=lfs diff=lfs merge=lfs -text
 /Assets/Asset[[:space:]]Store[[:space:]]Data/PBS[[:space:]]Materials[[:space:]]Variety[[:space:]]Pack/Hex[[:space:]]Lattice/hexagonal[[:space:]]lattice_Textures/07/lattice_07_normal_direct_x.tif filter=lfs diff=lfs merge=lfs -text
 /Assets/Asset[[:space:]]Store[[:space:]]Data/PBS[[:space:]]Materials[[:space:]]Variety[[:space:]]Pack/Hex[[:space:]]Lattice/hexagonal[[:space:]]lattice_Textures/07/lattice_07_normal_open_gl.tif filter=lfs diff=lfs merge=lfs -text
 /Assets/Asset[[:space:]]Store[[:space:]]Data/PBS[[:space:]]Materials[[:space:]]Variety[[:space:]]Pack/Hex[[:space:]]Lattice/hexagonal[[:space:]]lattice_Textures/08/lattice_08_normal_direct_x.tif filter=lfs diff=lfs merge=lfs -text
