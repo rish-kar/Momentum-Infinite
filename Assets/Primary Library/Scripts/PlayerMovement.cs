@@ -92,9 +92,18 @@ public class PlayerMovement : MonoBehaviour
                          QueryTriggerInteraction.Ignore);
 
         /* ---------- ANIMATOR ---------- */
-        anim.SetBool("Run", isRunning); // ★ start / stop run
-        anim.SetBool("Grounded", isGrounded); // ★ landing / falling
-
+        // Set animation parameters immediately for responsive transitions
+        if (anim)
+        {
+            anim.SetBool("Run", isRunning);
+            anim.SetBool("Grounded", isGrounded);
+            
+            // Force immediate transition to running when W is pressed
+            if (Input.GetKeyDown(KeyCode.W) && isGrounded)
+            {
+                anim.Play("Running - Crypto", 0, 0f);
+            }
+        }
 
         UpdateEnvironmentTracking();
         CheckDeathCondition();
