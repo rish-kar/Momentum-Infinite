@@ -3,10 +3,11 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Physics Related Fields")] private float baseSpeed = 50f;
+    [Header("Physics Related Fields")]
+    [SerializeField] private float baseSpeed = 50f;
     [SerializeField] private float maxSpeed = 300f;
     [SerializeField] private float acceleration = 2f;
-    [SerializeField] private float forwardForceMultiplier = 0.5f; // Adjust this multiplier to reduce forward force
+    [SerializeField] private float forwardForceMultiplier = 1f; // Adjust this multiplier to reduce forward force
     [SerializeField] private float sideSpeed = 80f;
     [SerializeField] private float jumpForce = 20f;
     [SerializeField] private float jumpForwardBoost = 200f;
@@ -16,6 +17,17 @@ public class PlayerMovement : MonoBehaviour
     [Header("Object References")] [SerializeField]
     private Rigidbody rb;
 
+    Animator playerAnimator;
+
+    [Header("Ground-check")] [SerializeField]
+    Transform feet; // empty at sole level
+
+    [SerializeField] float groundRadius = 0.25f;
+    [SerializeField] LayerMask groundMask = ~0;
+    [SerializeField] float groundedRay = 0.10f; // ★ new: ray length
+    bool wasGrounded;
+
+    bool isGrounded; // updated every frame
 
     [SerializeField] private Animator anim;
 
@@ -53,6 +65,7 @@ public class PlayerMovement : MonoBehaviour
     private void InitializeComponents()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
+        playerAnimator = GetComponent<Animator>();
         if (!anim) TryGetComponent(out anim);
 
         rb.constraints = RigidbodyConstraints.FreezeRotation;
@@ -62,6 +75,27 @@ public class PlayerMovement : MonoBehaviour
     private void Update()
     {
         HandleInput();
+
+        if (Input.GetKeyDown(KeyCode.Space)) TryJump();
+
+        /* ---------- GROUND CHECK ---------- */
+        wasGrounded = isGrounded; // ★
+        /* only count as grounded while moving DOWN or resting */
+        bool goingDown = rb.linearVelocity.y <= 0.0f;
+        isGrounded = goingDown &&
+                     Physics.SphereCast(feet.position + Vector3.up * 0.05f,
+                         groundRadius,
+                         Vector3.down,
+                         out _,
+                         groundedRay,
+                         groundMask,
+                         QueryTriggerInteraction.Ignore);
+
+        /* ---------- ANIMATOR ---------- */
+        anim.SetBool("Run", isRunning); // ★ start / stop run
+        anim.SetBool("Grounded", isGrounded); // ★ landing / falling
+
+
         UpdateEnvironmentTracking();
         CheckDeathCondition();
     }
@@ -90,6 +124,7 @@ public class PlayerMovement : MonoBehaviour
         // Forward movement
         if (isRunning)
         {
+            // playerAnimator.SetBool("Running - Crypto", true);
             currentSpeed = Mathf.Min(currentSpeed + acceleration, maxSpeed);
             // Apply reduced forward force using the multiplier
             rb.AddForce(0, 0, currentSpeed * forwardForceMultiplier * Time.deltaTime, ForceMode.VelocityChange);
@@ -106,15 +141,26 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // Update animations
-        UpdateAnimations();
+        // UpdateAnimations();
     }
 
     private void TryJump()
     {
-        if (!isJumping)
-        {
-            StartCoroutine(PerformJump());
-        }
+        if (!isGrounded || isJumping) return;
+
+        StartCoroutine(JumpRoutine());
+    }
+
+    IEnumerator JumpRoutine()
+    {
+        isJumping = true;
+        anim.SetTrigger("Jump"); // ★ jump trigger
+
+        rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
+        rb.AddForce(Vector3.forward * jumpForwardBoost, ForceMode.Impulse);
+
+        yield return new WaitForSeconds(jumpCooldown);
+        isJumping = false;
     }
 
     private IEnumerator PerformJump()
@@ -126,7 +172,7 @@ public class PlayerMovement : MonoBehaviour
         rb.AddForce(Vector3.forward * jumpForwardBoost, ForceMode.Impulse);
 
         // Trigger jump animation
-        if (anim) anim.SetTrigger("isJumping");
+        if (anim) anim.SetTrigger("Jump");
 
         yield return new WaitForSeconds(jumpCooldown);
         isJumping = false;
@@ -134,16 +180,16 @@ public class PlayerMovement : MonoBehaviour
 
     public float ReturnZAxis() => transform.position.z;
 
-    private void UpdateAnimations()
-    {
-        if (!anim) return;
-
-        anim.SetBool("isRunning", isRunning);
-
-        // Falling animation
-        float yPos = transform.position.y;
-        anim.SetBool("isFalling", yPos < -1f && yPos >= -170f);
-    }
+    // private void UpdateAnimations()
+    // {
+    //     if (!anim) return;
+    //
+    //     anim.SetBool("isRunning", isRunning);
+    //
+    //     // Falling animation
+    //     float yPos = transform.position.y;
+    //     anim.SetBool("isFalling", yPos < -1f && yPos >= -170f);
+    // }
 
 
     // --------------------------- Environment Updates ---------------------------
@@ -188,7 +234,7 @@ public class PlayerMovement : MonoBehaviour
         // because this prevents the respawning logic from being continuously triggered
         // at every frame until reset triggering multiple respawns on a single death.
         // Debugging Time on this Minor Issue: >24 hours (still needs testing)
-        if (transform.position.y < -10f && transform.position.y > -10.5f )
+        if (transform.position.y < -10f && transform.position.y > -10.5f)
         {
             isDeadOrRespawning = true; // lock immediately
 

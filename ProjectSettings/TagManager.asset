@@ -12,6 +12,7 @@ TagManager:
   - Background Graphics
   - Navigational Mesh
   - Prefabs
+  - Characters
   layers:
   - Default
   - TransparentFX
