@@ -1669,7 +1669,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   player: {fileID: 1076822218}
-  offset: {x: 0, y: 0, z: 0}
+  offset: {x: 0, y: 4.06, z: 0}
 --- !u!1 &920161667
 GameObject:
   m_ObjectHideFlags: 0
@@ -2059,7 +2059,7 @@ MonoBehaviour:
   jumpForce: 20
   jumpForwardBoost: 200
   jumpCooldown: 1
-  rb: {fileID: 0}
+  rb: {fileID: 1076822222}
   feet: {fileID: 1616032160}
   groundRadius: 0.25
   groundMask:
@@ -2598,6 +2598,11 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: cbf208406bf26ab46a0be15008a03eac, type: 2}
+    - target: {fileID: 5866666021909216657, guid: b146830ee05c660449fe32c8c55a42b5,
+        type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: b146830ee05c660449fe32c8c55a42b5,
         type: 3}
       propertyPath: m_ApplyRootMotion

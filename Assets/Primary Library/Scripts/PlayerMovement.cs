@@ -4,14 +4,14 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Physics Related Fields")]
-    [SerializeField] private float baseSpeed = 50f;
-    [SerializeField] private float maxSpeed = 300f;
-    [SerializeField] private float acceleration = 2f;
-    [SerializeField] private float forwardForceMultiplier = 1f; // Adjust this multiplier to reduce forward force
-    [SerializeField] private float sideSpeed = 80f;
-    [SerializeField] private float jumpForce = 20f;
-    [SerializeField] private float jumpForwardBoost = 200f;
-    [SerializeField] private float jumpCooldown = 2f;
+    [SerializeField] private float baseSpeed = 8f;           // Reduced from 50f for realistic movement
+    [SerializeField] private float maxSpeed = 15f;           // Reduced from 300f for realistic max speed
+    [SerializeField] private float acceleration = 1.5f;      // Slightly reduced for smoother acceleration
+    [SerializeField] private float forwardForceMultiplier = 1f; 
+    [SerializeField] private float sideSpeed = 12f;          // Reduced from 80f for realistic side movement
+    [SerializeField] private float jumpForce = 5f;           // Reduced from 8f for realistic jump height
+    [SerializeField] private float jumpForwardBoost = 8f;    // Reduced from 11f for realistic forward momentum
+    [SerializeField] private float jumpCooldown = 0.2f;      // Reduced from 0.5f for more responsive jumping
 
 
     [Header("Object References")] [SerializeField]
@@ -25,7 +25,6 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] float groundRadius = 0.25f;
     [SerializeField] LayerMask groundMask = ~0;
     [SerializeField] float groundedRay = 0.10f; // ★ new: ray length
-    bool wasGrounded;
 
     bool isGrounded; // updated every frame
 
@@ -75,11 +74,8 @@ public class PlayerMovement : MonoBehaviour
     private void Update()
     {
         HandleInput();
-
-        if (Input.GetKeyDown(KeyCode.Space)) TryJump();
-
+        
         /* ---------- GROUND CHECK ---------- */
-        wasGrounded = isGrounded; // ★
         /* only count as grounded while moving DOWN or resting */
         bool goingDown = rb.linearVelocity.y <= 0.0f;
         isGrounded = goingDown &&
@@ -92,16 +88,71 @@ public class PlayerMovement : MonoBehaviour
                          QueryTriggerInteraction.Ignore);
 
         /* ---------- ANIMATOR ---------- */
-        // Set animation parameters immediately for responsive transitions
+        // COMPLETELY SIMPLIFIED ANIMATION SYSTEM - DIRECT CONTROL
         if (anim)
         {
-            anim.SetBool("Run", isRunning);
             anim.SetBool("Grounded", isGrounded);
             
-            // Force immediate transition to running when W is pressed
-            if (Input.GetKeyDown(KeyCode.W) && isGrounded)
+            // ONLY handle animations when grounded and not jumping
+            if (isGrounded && !isJumping)
             {
-                anim.Play("Running - Crypto", 0, 0f);
+                // W KEY PRESSED - IMMEDIATE RUNNING
+                if (Input.GetKeyDown(KeyCode.W))
+                {
+                    anim.Play("Running - Crypto", 0, 0f);
+                    anim.SetBool("Run", true);
+                }
+                // W KEY RELEASED - IMMEDIATE STOP SEQUENCE
+                else if (Input.GetKeyUp(KeyCode.W))
+                {
+                    anim.Play("Running to Stop - Crypto", 0, 0f);
+                    anim.SetBool("Run", false);
+                    StartCoroutine(WaitForStopAnimationToFinish());
+                }
+                // W KEY HELD - MAINTAIN RUNNING
+                else if (isRunning)
+                {
+                    if (!anim.GetCurrentAnimatorStateInfo(0).IsName("Running - Crypto"))
+                    {
+                        anim.Play("Running - Crypto", 0, 0f);
+                    }
+                    anim.SetBool("Run", true);
+                }
+                // NO INPUT - GO TO IDLE 2
+                else
+                {
+                    if (!anim.GetCurrentAnimatorStateInfo(0).IsName("Idle 2 - Crypto") && 
+                        !anim.GetCurrentAnimatorStateInfo(0).IsName("Running to Stop - Crypto"))
+                    {
+                        anim.Play("Idle 2 - Crypto", 0, 0f);
+                    }
+                    anim.SetBool("Run", false);
+                }
+            }
+        }
+
+        // GROUND POSITION CORRECTION - Keep player above ground at all times
+        if (isGrounded)
+        {
+            // Ensure the player's feet are always above the ground surface
+            RaycastHit hit;
+            if (Physics.Raycast(feet.position + Vector3.up * 2f, Vector3.down, out hit, 5f, groundMask))
+            {
+                float desiredY = hit.point.y;
+                float currentY = transform.position.y;
+                
+                // If player is clipping into ground, lift them up
+                if (currentY < desiredY + 0.1f) // 0.1f buffer to stay above ground
+                {
+                    Vector3 correctedPosition = transform.position;
+                    correctedPosition.y = desiredY + 0.1f;
+                    transform.position = correctedPosition;
+                    
+                    // Also adjust velocity to prevent falling back down
+                    Vector3 velocity = rb.linearVelocity;
+                    if (velocity.y < 0) velocity.y = 0;
+                    rb.linearVelocity = velocity;
+                }
             }
         }
 
@@ -130,16 +181,42 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleMovement()
     {
-        // Forward movement
-        if (isRunning)
+        // Only apply forward force if running animation is actually playing OR during jump
+        bool canApplyForwardForce = false;
+        
+        if (anim != null)
         {
-            // playerAnimator.SetBool("Running - Crypto", true);
+            // Check if running animation is playing or if jumping (which should maintain forward momentum)
+            bool isRunningAnimationPlaying = anim.GetCurrentAnimatorStateInfo(0).IsName("Running - Crypto");
+            bool isJumpingWithForwardMomentum = isJumping;
+            bool isRunningToStop = anim.GetCurrentAnimatorStateInfo(0).IsName("Running to Stop - Crypto");
+            
+            canApplyForwardForce = isRunningAnimationPlaying || isJumpingWithForwardMomentum;
+        }
+        
+        // Forward movement - only apply force when running animation is playing or jumping
+        if (isRunning && canApplyForwardForce)
+        {
             currentSpeed = Mathf.Min(currentSpeed + acceleration, maxSpeed);
-            // Apply reduced forward force using the multiplier
+            // Apply forward force using the multiplier
             rb.AddForce(0, 0, currentSpeed * forwardForceMultiplier * Time.deltaTime, ForceMode.VelocityChange);
         }
-        else
+        else if (!isRunning)
         {
+            // Don't immediately stop - let ground friction handle deceleration naturally
+            // Only apply drag/friction to slow down the player gradually
+            Vector3 currentVelocity = rb.linearVelocity;
+            if (currentVelocity.z > 0.1f) // Only apply friction if moving forward
+            {
+                // Apply gradual deceleration through friction (adjust multiplier for feel)
+                float frictionForce = currentVelocity.z * 8f; // Friction coefficient
+                rb.AddForce(0, 0, -frictionForce * Time.deltaTime, ForceMode.VelocityChange);
+            }
+            else
+            {
+                // Stop completely when velocity is very low to prevent micro-movements
+                rb.linearVelocity = new Vector3(currentVelocity.x, currentVelocity.y, 0f);
+            }
             currentSpeed = baseSpeed;
         }
 
@@ -148,44 +225,59 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.AddForce(horizontalInput * sideSpeed * Time.deltaTime, 0, 0, ForceMode.VelocityChange);
         }
-
-        // Update animations
-        // UpdateAnimations();
     }
 
     private void TryJump()
     {
         if (!isGrounded || isJumping) return;
 
-        StartCoroutine(JumpRoutine());
+        // Store current state
+        bool wasRunning = anim.GetCurrentAnimatorStateInfo(0).IsName("Running - Crypto");
+        
+        // FORCE JUMP ANIMATION IMMEDIATELY - NO DELAYS
+        isJumping = true;
+        anim.Play("Jump - Crypto", 0, 0f);
+        anim.speed = 0.4f;
+        
+        // Apply jump physics RIGHT NOW
+        rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
+        
+        if (wasRunning)
+        {
+            rb.AddForce(Vector3.forward * jumpForwardBoost, ForceMode.Impulse);
+        }
+        
+        StartCoroutine(WaitForLanding());
     }
 
-    IEnumerator JumpRoutine()
+    IEnumerator WaitForLanding()
     {
-        isJumping = true;
-        anim.SetTrigger("Jump"); // ★ jump trigger
-
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
-        rb.AddForce(Vector3.forward * jumpForwardBoost, ForceMode.Impulse);
-
+        yield return new WaitUntil(() => isGrounded);
+        
+        anim.speed = 1f;
+        
+        if (isRunning)
+        {
+            anim.Play("Running - Crypto", 0, 0f);
+        }
+        else
+        {
+            anim.Play("Idle 2 - Crypto", 0, 0f);
+        }
+        
         yield return new WaitForSeconds(jumpCooldown);
         isJumping = false;
     }
 
-    private IEnumerator PerformJump()
+    IEnumerator WaitForStopAnimationToFinish()
     {
-        isJumping = true;
-
-        // Initial jump force
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
-        rb.AddForce(Vector3.forward * jumpForwardBoost, ForceMode.Impulse);
-
-        // Trigger jump animation
-        if (anim) anim.SetTrigger("Jump");
-
-        yield return new WaitForSeconds(jumpCooldown);
-        isJumping = false;
+        yield return new WaitForSeconds(0.3f);
+        if (!isRunning)
+        {
+            anim.Play("Idle 2 - Crypto", 0, 0f);
+        }
     }
+
 
     public float ReturnZAxis() => transform.position.z;
 
@@ -296,5 +388,18 @@ public class PlayerMovement : MonoBehaviour
 
         FindObjectOfType<GameManager>().GameEnds();
         // Lock remains forever, no further respawns
+    }
+
+    private IEnumerator SmoothRunningToStopSequence()
+    {
+        // Play running to stop animation with proper duration
+        anim.Play("Running to Stop - Crypto", 0, 0f);
+        anim.SetBool("Run", false);
+        
+        // Wait longer to let the running to stop animation play visibly
+        yield return new WaitForSeconds(0.4f); // Increased from 0.1f to show the animation properly
+        
+        // Then transition to idle
+        anim.Play("Idle 2 - Crypto", 0, 0f);
     }
 }

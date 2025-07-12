@@ -301,19 +301,19 @@ AnimatorStateMachine:
   m_ChildStates:
   - serializedVersion: 1
     m_State: {fileID: -255448968613167323}
-    m_Position: {x: 240, y: 330, z: 0}
+    m_Position: {x: -50, y: -130, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 4332405186580614726}
-    m_Position: {x: 440, y: -80, z: 0}
+    m_Position: {x: 950, y: -510, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -5325111874064248817}
-    m_Position: {x: 340, y: 180, z: 0}
+    m_Position: {x: 30, y: -510, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -5239336298889915919}
-    m_Position: {x: 620, y: 250, z: 0}
+    m_Position: {x: 460, y: -110, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -2698445639031572182}
-    m_Position: {x: 90, y: -220, z: 0}
+    m_Position: {x: 450, y: 350, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -358,7 +358,7 @@ AnimatorStateTransition:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: 
+  m_Name: Start Running
   m_Conditions:
   - m_ConditionMode: 1
     m_ConditionEvent: Run

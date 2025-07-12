@@ -13,11 +13,12 @@ public class ProceduralTerrain : MonoBehaviour
     [SerializeField] private GameObject _groundContainer;
     [SerializeField] private GameObject _treePrefab;
     public bool _stopSpawningTerrain = false;
-    private float _newgroundZAxis;
-    private float _newgroundXAxis;
-    private Vector3 _previousGroundLoc;
-    private Vector3 _positionOfGround;
 
+    [Header("Dynamic Spawning Settings")]
+    [SerializeField] private float spawnDistanceAhead = 500f; // Always keep 500 units ahead
+    [SerializeField] private float minSpawnRate = 0.1f; // Minimum time between spawns (fast player)
+    [SerializeField] private float maxSpawnRate = 1f; // Maximum time between spawns (slow player)
+    [SerializeField] private float groundTileLength = 96f; // Length of each ground tile
 
     [Header("Agents and Player")] [SerializeField]
     private GhostRunnerAgent ghostRunnerAgent;
@@ -47,6 +48,13 @@ public class ProceduralTerrain : MonoBehaviour
 
     [Header("Script References")] [SerializeField]
     private SkyboxChanger skyboxChanger;
+
+    // Private variables for terrain spawning logic
+    private float _newgroundZAxis;
+    private float _newgroundXAxis;
+    private Vector3 _previousGroundLoc;
+    private Vector3 _positionOfGround;
+    private float lastPlayerZ; // Track player's last position for speed calculation
 
     private void Awake()
     {
@@ -110,7 +118,7 @@ public class ProceduralTerrain : MonoBehaviour
     private void StartSpawning()
     {
         //Debug.Log("Time Check ===== " + Time.time);
-        _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + 96));
+        _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + groundTileLength));
 
         if (skyboxChanger == null)
             skyboxChanger = FindObjectOfType<SkyboxChanger>();
@@ -158,6 +166,19 @@ public class ProceduralTerrain : MonoBehaviour
             tilesSinceLastBake = 0;
             StartCoroutine(RebuildNavmeshAsync()); // this calls the coroutine below
         }
+
+        AdjustSpawnRate();
+    }
+
+    private void AdjustSpawnRate()
+    {
+        // Calculate the player's speed based on their movement since the last frame
+        float playerSpeed = Mathf.Abs(_player.transform.position.z - lastPlayerZ) / Time.deltaTime;
+
+        // Remap the player's speed to a spawn rate between minSpawnRate and maxSpawnRate
+        _timeRate = Mathf.Clamp(maxSpawnRate - playerSpeed * 0.01f, minSpawnRate, maxSpawnRate);
+
+        lastPlayerZ = _player.transform.position.z;
     }
 
     // public void SpawnATree()
