@@ -41,7 +41,7 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
     {
         skyboxChanger = FindObjectOfType<SkyboxChanger>();
         if (!skyboxChanger)
-            Debug.LogWarning("SkyboxChanger not found – defaulting to variant 0.");
+            // Debug.LogWarning("SkyboxChanger not found – defaulting to variant 0.");
 
         if (PrefabCache.Count == 0) BuildPrefabCache();
     }
@@ -79,7 +79,7 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
 
         if (!ground.TryGetComponent(out Collider groundCol))
         {
-            Debug.LogWarning("Ground passed to SpawnObjectsOnGround has no collider!");
+            // Debug.LogWarning("Ground passed to SpawnObjectsOnGround has no collider!");
             return;
         }
 

@@ -17,13 +17,13 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Death screen GameObject is not assigned in the inspector.");
+            // Debug.LogWarning("Death screen GameObject is not assigned in the inspector.");
         }
     }
 
     public void GameEnds()
     {
-        Debug.Log("Game Over");
+        // Debug.Log("Game Over");
         if (deathScreen) deathScreen.SetActive(true);
         Invoke("RestartGame", restartDelay);
     }

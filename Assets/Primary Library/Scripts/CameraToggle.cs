@@ -38,7 +38,7 @@ public class CameraToggle : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("No player assigned to the camera. Please assign one in the Inspector.");
+            // Debug.LogWarning("No player assigned to the camera. Please assign one in the Inspector.");
         }
     }
 
@@ -80,7 +80,7 @@ public class CameraToggle : MonoBehaviour
     {
         if (player == null)
         {
-            Debug.LogWarning("No player assigned to the camera. Transition canceled.");
+            // Debug.LogWarning("No player assigned to the camera. Transition canceled.");
             return;
         }
 

@@ -31,7 +31,7 @@ public class SkyboxChanger : MonoBehaviour
         // quick sanity: same count?
         if (skyboxes.Count != videoClips.Count || skyboxes.Count == 0)
         {
-            Debug.LogError("Skyboxes & VideoClips lists must both contain the same non-zero number of elements!");
+            // Debug.LogError("Skyboxes & VideoClips lists must both contain the same non-zero number of elements!");
             enabled = false;
             return;
         }

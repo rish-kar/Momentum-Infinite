@@ -1,44 +1,50 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Physics Related Fields")]
-    [SerializeField] private float baseSpeed = 6f;           // Realistic movement speed
-    [SerializeField] private float maxSpeed = 12f;           // Realistic max speed
-    [SerializeField] private float acceleration = 3f;        // Increased for better responsiveness
-    [SerializeField] private float forwardForceMultiplier = 15f; // Increased for actual movement
-    [SerializeField] private float sideSpeed = 8f;           // Reduced as requested
-    [SerializeField] private float jumpForce = 7f;           // Realistic jump height
-    [SerializeField] private float jumpForwardBoost = 4f;    // Realistic forward momentum
-    [SerializeField] private float jumpCooldown = 0.1f;      // Quick jump response
+    [Header("Physics Related Fields")] [SerializeField]
+    private float baseSpeed = 6f; // Realistic movement speed
 
-    [Header("Object References")]
-    [SerializeField] private Rigidbody rb;
+    [SerializeField] private float maxSpeed = 12f; // Realistic max speed
+    [SerializeField] private float acceleration = 3f; // Increased for better responsiveness
+    [SerializeField] private float forwardForceMultiplier = 15f; // Increased for actual movement
+    [SerializeField] private float constantForwardSpeed = 8f; // CONSTANT FORWARD MOVEMENT for endless runner
+    [SerializeField] private float sideSpeed = 8f; // Reduced as requested
+    [SerializeField] private float jumpForce = 7f; // Realistic jump height
+    [SerializeField] private float jumpForwardBoost = 4f; // Realistic forward momentum
+    [SerializeField] private float jumpCooldown = 0.1f; // Quick jump response
+
+    [Header("Object References")] [SerializeField]
+    private Rigidbody rb;
+
     [SerializeField] private Animator anim;
 
-    [Header("Ground-check")]
-    [SerializeField] Transform feet; // empty at sole level
+    [Header("Ground-check")] [SerializeField]
+    Transform feet; // empty at sole level
+
     [SerializeField] float groundRadius = 0.25f;
     [SerializeField] LayerMask groundMask = ~0;
     [SerializeField] float groundedRay = 0.15f;
 
     bool isGrounded; // updated every frame
 
-    [Header("Environment Tracking")]
-    [SerializeField] private int environmentUpdateInterval = 150;
+    [Header("Environment Tracking")] [SerializeField]
+    private int environmentUpdateInterval = 150;
+
     private int nextEnvironmentUpdate;
 
-    [Header("Respawn Settings")]
-    [SerializeField] private int maxRespawns = 3;
+    [Header("Respawn Settings")] [SerializeField]
+    private int maxRespawns = 3;
+
     private int respawnCount;
     private GameObject lastGroundBeforeDeath;
     [SerializeField] private GameObject respawnScreen;
     private bool isDeadOrRespawning;
     private bool hasTriggeredDeathAnimation;
 
-    [Header("Flags")]
-    [SerializeField] private bool isJumping;
+    [Header("Flags")] [SerializeField] private bool isJumping;
     private float currentSpeed;
     private bool isRunning;
     private float horizontalInput;
@@ -47,11 +53,21 @@ public class PlayerMovement : MonoBehaviour
     private bool isInRunToStopTransition;
     private bool justRespawned; // New flag to handle respawn state
     private bool actuallyFalling; // Track if player is actually falling off platform
+    private bool hasPlayedInitialIdle; // Track if initial idle animation has been played
+    private bool isPlayingInitialIdle; // Track if currently playing initial idle to prevent multiple starts
+    private Vector3 lockedPosition; // Lock position during initial idle animation
 
     // Animation state hashes for performance
     private static readonly int GroundedHash = Animator.StringToHash("Grounded");
     private static readonly int RunHash = Animator.StringToHash("Run");
     private static readonly int JumpHash = Animator.StringToHash("Jump");
+    private static readonly int LeftTriggerHash = Animator.StringToHash("LeftTrigger");
+    private static readonly int RightTriggerHash = Animator.StringToHash("RightTrigger");
+    private static readonly int FallingTriggerHash = Animator.StringToHash("FallingTrigger");
+    private static readonly int InitialIdleHash = Animator.StringToHash("InitialIdle"); // For initial idle trigger
+
+    
+    private Dictionary<string, bool> _animationClipCache = new();
 
     // --------------------------- Unity Methods ---------------------------
 
@@ -60,7 +76,11 @@ public class PlayerMovement : MonoBehaviour
         InitializeComponents();
         currentSpeed = baseSpeed;
         nextEnvironmentUpdate = environmentUpdateInterval;
-        Debug.Log("[PlayerMovement] Awake - Components initialized");
+        
+        foreach (AnimationClip clip in anim.runtimeAnimatorController.animationClips)
+        {
+            _animationClipCache[clip.name] = true;
+        }
     }
 
     private void InitializeComponents()
@@ -71,10 +91,9 @@ public class PlayerMovement : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezeRotation;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.linearDamping = 1f; // Reduced drag for better movement
-        
+
         // Ensure player starts above ground
         CorrectPlayerPosition();
-        Debug.Log("[PlayerMovement] Components initialized successfully");
     }
 
     private void Update()
@@ -82,15 +101,16 @@ public class PlayerMovement : MonoBehaviour
         HandleInput();
         CheckGroundStatus();
         HandleAnimations();
+
+        // Call position correction more frequently during initial idle animation
+        // if (isPlayingInitialIdle)
+        // {
+        //     CorrectPlayerPositionForInitialIdle();
+        // }
+
         CorrectPlayerPosition();
         UpdateEnvironmentTracking();
         CheckDeathCondition();
-        
-        // Debug current state every few frames
-        if (Time.frameCount % 60 == 0)
-        {
-            Debug.Log($"[PlayerMovement] State - Grounded: {isGrounded}, Running: {isRunning}, Jumping: {isJumping}, Falling: {isFalling}, Position: {transform.position}, Velocity: {rb.linearVelocity}");
-        }
     }
 
     private void FixedUpdate()
@@ -102,16 +122,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleInput()
     {
-        // COMPREHENSIVE INPUT DEBUGGING
-        if (Input.GetKeyDown(KeyCode.W)) Debug.Log("[INPUT] W KEY DOWN - Start Running");
-        if (Input.GetKeyUp(KeyCode.W)) Debug.Log("[INPUT] W KEY UP - Stop Running");
-        if (Input.GetKeyDown(KeyCode.Space)) Debug.Log("[INPUT] SPACE KEY DOWN - Jump Attempt");
-        if (Input.GetKeyDown(KeyCode.A)) Debug.Log("[INPUT] A KEY DOWN - Left Movement");
-        if (Input.GetKeyDown(KeyCode.D)) Debug.Log("[INPUT] D KEY DOWN - Right Movement");
-        if (Input.GetKeyDown(KeyCode.LeftArrow)) Debug.Log("[INPUT] LEFT ARROW DOWN");
-        if (Input.GetKeyDown(KeyCode.RightArrow)) Debug.Log("[INPUT] RIGHT ARROW DOWN");
-        if (Input.GetKeyDown(KeyCode.R)) Debug.Log("[INPUT] R KEY DOWN - Teleport Request");
-        
         // R button teleport functionality
         if (Input.GetKeyDown(KeyCode.R))
         {
@@ -124,67 +134,26 @@ public class PlayerMovement : MonoBehaviour
         isRunning = Input.GetKey(KeyCode.W);
         horizontalInput = Input.GetAxisRaw("Horizontal");
 
-        // Log every change in running state
-        if (wasRunning != isRunning)
-        {
-            Debug.Log($"[INPUT] Running state changed: {wasRunning} -> {isRunning}");
-            Debug.Log($"[INPUT] W Key currently pressed: {Input.GetKey(KeyCode.W)}");
-        }
-
-        // Log horizontal input changes
-        float previousHorizontal = horizontalInput;
-        if (previousHorizontal != horizontalInput)
-        {
-            Debug.Log($"[INPUT] Horizontal input changed: {previousHorizontal} -> {horizontalInput}");
-        }
-
         // Jump input - IMMEDIATE response
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
         {
-            Debug.Log("[INPUT] Space pressed - attempting jump");
             TryJump();
         }
-        else if (Input.GetKeyDown(KeyCode.Space))
+
+        // Handle Left/Right movements - SIMPLIFIED for better functionality
+        if (isGrounded && !isJumping && !isRunning)
         {
-            Debug.Log($"[INPUT] Jump blocked - Grounded: {isGrounded}, Already Jumping: {isJumping}");
-        }
-        
-        // Handle Left/Right movements ONLY during Idle states and when grounded
-        if (isGrounded && !isJumping && !isRunning && !isInRunToStopTransition)
-        {
-            var currentState = anim.GetCurrentAnimatorStateInfo(0);
-            bool isInIdleState = currentState.IsName("Idle 2 - Crypto") || currentState.IsName("Idle - Crypto");
-            
-            Debug.Log($"[INPUT] Side movement check - Grounded: {isGrounded}, Jumping: {isJumping}, Running: {isRunning}, InTransition: {isInRunToStopTransition}, InIdleState: {isInIdleState}");
-            
-            if (isInIdleState)
+            // Left movement
+            if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
             {
-                // Left movement
-                if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
-                {
-                    Debug.Log("[INPUT] LEFT MOVEMENT TRIGGERED - Conditions met");
-                    PerformSideMovement(true); // true for left
-                }
-                
-                // Right movement
-                if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
-                {
-                    Debug.Log("[INPUT] RIGHT MOVEMENT TRIGGERED - Conditions met");
-                    PerformSideMovement(false); // false for right
-                }
+                PerformSideMovement(true); // true for left
             }
-            else
+
+            // Right movement
+            if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
             {
-                Debug.Log($"[INPUT] Side movement BLOCKED - Not in idle state. Current animation: {currentState.shortNameHash}");
+                PerformSideMovement(false); // false for right
             }
-        }
-        else
-        {
-            // Log why side movement is blocked
-            if (!isGrounded) Debug.Log("[INPUT] Side movement BLOCKED - Not grounded");
-            if (isJumping) Debug.Log("[INPUT] Side movement BLOCKED - Currently jumping");
-            if (isRunning) Debug.Log("[INPUT] Side movement BLOCKED - Currently running");
-            if (isInRunToStopTransition) Debug.Log("[INPUT] Side movement BLOCKED - In stop transition");
         }
     }
 
@@ -192,23 +161,30 @@ public class PlayerMovement : MonoBehaviour
     {
         string direction = isLeft ? "Left" : "Right";
         float forceMultiplier = isLeft ? -1f : 1f;
-        
-        Debug.Log($"[PlayerMovement] Performing {direction} movement");
-        
-        // Check if animation exists, otherwise use Idle 2
-        if (HasAnimationClip($"{direction} - Crypto"))
+
+        // DIRECT ANIMATION PLAY - bypassing triggers for immediate response
+        string animationName = $"{direction} - Crypto";
+
+        if (HasAnimationClip(animationName))
         {
-            anim.Play($"{direction} - Crypto", 0, 0f);
-            Debug.Log($"[PlayerMovement] Playing {direction} animation");
+            // Play animation directly with immediate transition (no crossfade time)
+            anim.Play(animationName, 0, 0f);
         }
         else
         {
-            Debug.LogWarning($"[PlayerMovement] {direction} animation not found, staying in idle");
+            // Fallback to triggers if direct play fails
+            if (isLeft)
+            {
+                anim.SetTrigger(LeftTriggerHash);
+            }
+            else
+            {
+                anim.SetTrigger(RightTriggerHash);
+            }
         }
-        
+
         // Apply smooth side force with reduced speed
         rb.AddForce(forceMultiplier * sideSpeed, 0, 0, ForceMode.VelocityChange);
-        Debug.Log($"[PlayerMovement] Applied {direction} force: {forceMultiplier * sideSpeed}");
     }
 
     private void CheckGroundStatus()
@@ -217,13 +193,13 @@ public class PlayerMovement : MonoBehaviour
 
         // More robust ground detection with multiple raycasts
         isGrounded = Physics.SphereCast(
-            feet.position + Vector3.up * 0.1f,
+            feet.position, // Start at feet position
             groundRadius,
             Vector3.down,
             out _,
-            groundedRay + 0.1f, // Slightly longer raycast
-            groundMask,
-            QueryTriggerInteraction.Ignore);
+            groundedRay, // Total distance
+            groundMask
+        );
 
         // Additional raycast from center of player for side movement stability
         if (!isGrounded)
@@ -236,16 +212,13 @@ public class PlayerMovement : MonoBehaviour
                 QueryTriggerInteraction.Ignore);
         }
 
-        if (wasGrounded != isGrounded)
+        if (wasGrounded != isGrounded && !isPlayingInitialIdle)
         {
-            Debug.Log($"[PlayerMovement] Ground status changed: {wasGrounded} -> {isGrounded}");
-            
             // Only start tracking actual falling when leaving ground AND not jumping AND velocity is downward
-            if (wasGrounded && !isGrounded && !isJumping && rb.linearVelocity.y < -1f)
+            if (wasGrounded && !isGrounded && rb.linearVelocity.y < -1f)
             {
                 actuallyFalling = true;
                 fallingTimer = 0f;
-                Debug.Log("[PlayerMovement] Started actually falling off platform");
             }
         }
 
@@ -257,7 +230,6 @@ public class PlayerMovement : MonoBehaviour
         // Reset respawn state when grounded
         if (isGrounded && justRespawned)
         {
-            Debug.Log("[PlayerMovement] Just landed after respawn - resetting to Idle 2");
             justRespawned = false;
             isFalling = false;
             fallingTimer = 0f;
@@ -266,10 +238,17 @@ public class PlayerMovement : MonoBehaviour
             anim.Play("Idle 2 - Crypto", 0, 0f);
         }
 
-        // CRITICAL FIX: Trigger respawn when falling below -4f Y position as requested
-        if (transform.position.y < -4f && !isDeadOrRespawning)
+        // CRITICAL FIX: Trigger falling animation at -5f, respawn at -10f as requested
+        // Add safeguards to prevent double triggering
+        if (transform.position.y < -5f && !isFalling && actuallyFalling && !isDeadOrRespawning)
         {
-            Debug.Log("[PlayerMovement] Player fell below -4f Y position - triggering respawn");
+            isFalling = true;
+            anim.SetTrigger(FallingTriggerHash);
+        }
+
+        // Trigger respawn when falling below -10f Y position - ONLY ONCE
+        if (transform.position.y < -10f && !isDeadOrRespawning)
+        {
             isDeadOrRespawning = true;
 
             if (respawnCount < maxRespawns)
@@ -287,61 +266,86 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!anim) return;
 
-        // Skip falling animation logic if just respawned
-        if (justRespawned)
-        {
-            Debug.Log("[PlayerMovement] Skipping falling animation - just respawned");
-            return;
-        }
+        // Skip all animations if just respawned
+        if (justRespawned) return;
 
         // Handle falling animation ONLY when actually falling off platform (not during jumps)
-        if (!isGrounded && actuallyFalling && !isJumping && rb.linearVelocity.y < -5f)
+        if (!isGrounded && actuallyFalling && !isJumping && rb.linearVelocity.y < -2f)
         {
             if (!isFalling)
             {
                 fallingTimer += Time.deltaTime;
-                
-                // Trigger falling after 0.8 seconds of actual falling off platform
-                if (fallingTimer >= 0.8f)
+
+                // Trigger falling after 0.5 seconds of actual falling off platform for slow transition
+                if (fallingTimer >= 0.5f)
                 {
                     isFalling = true;
-                    Debug.Log("[PlayerMovement] Triggering falling animation - actually fell off platform");
-                    
-                    // Check if Falling animation exists, otherwise use a substitute
-                    if (HasAnimationClip("Falling - Crypto"))
-                    {
-                        anim.Play("Falling - Crypto", 0, 0f);
-                    }
-                    else if (HasAnimationClip("Jump - Crypto"))
-                    {
-                        anim.Play("Jump - Crypto", 0, 0f);
-                        anim.speed = 0.3f; // Slow down jump animation for falling
-                    }
-                    Debug.Log("[PlayerMovement] Started falling animation");
+                    anim.SetTrigger(FallingTriggerHash);
                 }
             }
         }
-        
+
         // Reset falling state when grounded or jumping
         if (isGrounded || isJumping)
         {
-            if (isFalling || actuallyFalling)
-            {
-                Debug.Log("[PlayerMovement] Resetting falling state");
-            }
             isFalling = false;
             fallingTimer = 0f;
             actuallyFalling = false;
             anim.speed = 1f; // Reset animation speed
         }
-        
+
         // Handle ground-based animations ONLY when grounded and not jumping
         if (isGrounded && !isJumping && !isFalling && !justRespawned)
         {
+            // Play initial idle animation once at the start, then transition to Idle 2
+            if (!hasPlayedInitialIdle && !isPlayingInitialIdle)
+            {
+                isPlayingInitialIdle = true;
+
+                // Lock the player position at a safe height above ground
+                RaycastHit hit;
+                if (Physics.Raycast(feet.position + Vector3.up * 2f, Vector3.down, out hit, 5f, groundMask))
+                {
+                    lockedPosition = new Vector3(transform.position.x, hit.point.y + 1f, transform.position.z);
+                }
+                else
+                {
+                    lockedPosition = new Vector3(transform.position.x, transform.position.y + 1f, transform.position.z);
+                }
+
+                // Set position and freeze all physics
+                transform.position = lockedPosition;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true; // Completely freeze physics during animation
+
+                if (HasAnimationClip("Idle - Crypto"))
+                {
+                    anim.Play("Idle - Crypto", 0, 0f);
+                    StartCoroutine(WaitForInitialIdleToFinish());
+                }
+                else
+                {
+                    anim.Play("Idle 2 - Crypto", 0, 0f);
+                    hasPlayedInitialIdle = true;
+                    isPlayingInitialIdle = false;
+                    rb.isKinematic = false; // Re-enable physics
+                }
+
+                return; // Exit early to let initial idle play
+            }
+
+            // Skip other animations while initial idle is playing
+            if (isPlayingInitialIdle)
+            {
+                // Maintain locked position during animation
+                transform.position = lockedPosition;
+                return;
+            }
+
             // IMMEDIATE W key response
             if (Input.GetKeyDown(KeyCode.W))
             {
-                Debug.Log("[PlayerMovement] W Pressed - Starting Run Animation");
                 isInRunToStopTransition = false;
                 anim.Play("Running - Crypto", 0, 0f);
                 anim.SetBool(RunHash, true);
@@ -349,9 +353,8 @@ public class PlayerMovement : MonoBehaviour
             // IMMEDIATE W key release response
             else if (Input.GetKeyUp(KeyCode.W))
             {
-                Debug.Log("[PlayerMovement] W Released - Starting Stop Sequence");
                 isInRunToStopTransition = true;
-                
+
                 // Check if Running to Stop animation exists
                 if (HasAnimationClip("Running to Stop - Crypto"))
                 {
@@ -364,6 +367,7 @@ public class PlayerMovement : MonoBehaviour
                     anim.Play("Idle 2 - Crypto", 0, 0f);
                     isInRunToStopTransition = false;
                 }
+
                 anim.SetBool(RunHash, false);
             }
             // Maintain running state
@@ -371,23 +375,24 @@ public class PlayerMovement : MonoBehaviour
             {
                 if (!anim.GetCurrentAnimatorStateInfo(0).IsName("Running - Crypto"))
                 {
-                    Debug.Log("[PlayerMovement] Ensuring running animation is playing");
                     anim.Play("Running - Crypto", 0, 0f);
                 }
+
                 anim.SetBool(RunHash, true);
             }
-            // Default to Idle 2 when no input and not in transition
-            else if (!isRunning && !isInRunToStopTransition)
+            // Default to Idle 2 when no input and not in transition (only after initial idle has played)
+            else if (!isRunning && !isInRunToStopTransition && hasPlayedInitialIdle)
             {
                 var currentState = anim.GetCurrentAnimatorStateInfo(0);
-                if (!currentState.IsName("Idle 2 - Crypto") && 
+                if (!currentState.IsName("Idle 2 - Crypto") &&
                     !currentState.IsName("Running to Stop - Crypto") &&
                     !currentState.IsName("Left - Crypto") &&
-                    !currentState.IsName("Right - Crypto"))
+                    !currentState.IsName("Right - Crypto") &&
+                    !currentState.IsName("Idle - Crypto"))
                 {
-                    Debug.Log("[PlayerMovement] Returning to Idle 2");
                     anim.Play("Idle 2 - Crypto", 0, 0f);
                 }
+
                 anim.SetBool(RunHash, false);
             }
         }
@@ -395,57 +400,32 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleMovement()
     {
-        // Only apply forward force when running animation is playing AND grounded
-        bool canApplyForwardForce = false;
-        
-        if (anim != null && isGrounded && !justRespawned)
+        // Player should ONLY move forward when W is pressed (running)
+        if (!isDeadOrRespawning && !justRespawned && isGrounded && isRunning)
         {
-            bool isRunningAnimationPlaying = anim.GetCurrentAnimatorStateInfo(0).IsName("Running - Crypto");
-            bool isJumpingWithForwardMomentum = isJumping && isRunning;
-            
-            canApplyForwardForce = isRunningAnimationPlaying || isJumpingWithForwardMomentum;
-            
-            if (Time.frameCount % 120 == 0)
-            {
-                Debug.Log($"[PlayerMovement] Movement Check - CanApplyForce: {canApplyForwardForce}, RunningAnim: {isRunningAnimationPlaying}, IsRunning: {isRunning}");
-            }
-        }
-        
-        // Forward movement - ONLY when conditions are met
-        if (isRunning && canApplyForwardForce)
-        {
-            currentSpeed = Mathf.Lerp(currentSpeed, maxSpeed, acceleration * Time.fixedDeltaTime);
-            // Apply constant forward force for movement
-            rb.AddForce(Vector3.forward * forwardForceMultiplier, ForceMode.Force);
-            
-            if (Time.frameCount % 120 == 0)
-            {
-                Debug.Log($"[PlayerMovement] Applying forward force: {forwardForceMultiplier}, Current Speed: {currentSpeed}");
-            }
-        }
-        else if (!isRunning && !isInRunToStopTransition && !justRespawned)
-        {
-            // Smooth deceleration when not running
-            Vector3 velocity = rb.linearVelocity;
-            velocity.z = Mathf.Lerp(velocity.z, 0f, 8f * Time.fixedDeltaTime);
-            rb.linearVelocity = velocity;
-            currentSpeed = Mathf.Lerp(currentSpeed, baseSpeed, 4f * Time.fixedDeltaTime);
-        }
-        else if (isInRunToStopTransition)
-        {
-            // Gradual deceleration during stop animation
+            // Apply forward movement only when W is pressed
             Vector3 currentVelocity = rb.linearVelocity;
-            if (currentVelocity.z > 0.5f)
+            currentVelocity.z = constantForwardSpeed;
+            rb.linearVelocity = currentVelocity;
+
+            // Extra speed boost when running
+            rb.AddForce(Vector3.forward * forwardForceMultiplier * 0.2f, ForceMode.Force);
+        }
+        else if (!isDeadOrRespawning && !justRespawned && !isGrounded && isRunning)
+        {
+            // When in air and running, maintain forward momentum
+            Vector3 currentVelocity = rb.linearVelocity;
+            if (currentVelocity.z < constantForwardSpeed * 0.8f)
             {
-                currentVelocity.z = Mathf.Lerp(currentVelocity.z, 0f, 6f * Time.fixedDeltaTime);
-                rb.linearVelocity = currentVelocity;
+                rb.AddForce(Vector3.forward * forwardForceMultiplier * 0.5f, ForceMode.Force);
             }
-            else
-            {
-                Vector3 velocity = rb.linearVelocity;
-                velocity.z = 0f;
-                rb.linearVelocity = velocity;
-            }
+        }
+        else if (!isRunning && isGrounded)
+        {
+            // When not running, stop forward movement
+            Vector3 currentVelocity = rb.linearVelocity;
+            currentVelocity.z = Mathf.Lerp(currentVelocity.z, 0f, 8f * Time.fixedDeltaTime);
+            rb.linearVelocity = currentVelocity;
         }
 
         // Smooth lateral movement
@@ -457,43 +437,34 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryJump()
     {
-        if (!isGrounded || isJumping) 
-        {
-            Debug.Log($"[PlayerMovement] Jump blocked - Grounded: {isGrounded}, Jumping: {isJumping}");
-            return;
-        }
+        if (!isGrounded || isJumping) return;
 
         bool wasRunning = isRunning;
-        
+
         // IMMEDIATE jump animation
         isJumping = true;
-        Debug.Log("[PlayerMovement] Starting jump sequence");
-        
+
         // Check if Jump animation exists
         if (HasAnimationClip("Jump - Crypto"))
         {
             anim.Play("Jump - Crypto", 0, 0f);
-            anim.speed = 0.6f; // Slower jump animation
-            Debug.Log("[PlayerMovement] Playing jump animation");
-        }
+            anim.speed = Mathf.Clamp(jumpForce / 7f, 0.5f, 1.2f);        }
         else
         {
-            Debug.LogWarning("[PlayerMovement] Jump animation not found, using Idle animation");
             anim.Play("Idle 2 - Crypto", 0, 0f);
         }
-        
+
         anim.SetBool(JumpHash, true);
-        
+
         // Apply jump physics
         rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
-        
+
         // Add forward momentum only if running
         if (wasRunning)
         {
             rb.AddForce(Vector3.forward * jumpForwardBoost, ForceMode.VelocityChange);
-            Debug.Log("[PlayerMovement] Added forward momentum to jump");
         }
-        
+
         StartCoroutine(WaitForLanding());
     }
 
@@ -507,14 +478,14 @@ public class PlayerMovement : MonoBehaviour
             {
                 float desiredY = hit.point.y;
                 float currentY = transform.position.y;
-                
+
                 // Lift player if clipping into ground
                 if (currentY < desiredY + 0.2f)
                 {
                     Vector3 correctedPosition = transform.position;
                     correctedPosition.y = desiredY + 0.2f;
                     transform.position = correctedPosition;
-                    
+
                     // Prevent falling back down
                     Vector3 velocity = rb.linearVelocity;
                     if (velocity.y < 0) velocity.y = 0;
@@ -524,58 +495,105 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    private void CorrectPlayerPositionForInitialIdle()
+    {
+        // Special correction to prevent ground clipping during initial idle animation
+        // This animation involves lying down and standing up, so we need constant correction
+        if (isGrounded && !justRespawned && isPlayingInitialIdle)
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(feet.position + Vector3.up * 2f, Vector3.down, out hit, 5f, groundMask))
+            {
+                float desiredY = hit.point.y;
+                float currentY = transform.position.y;
+
+                // During initial idle, maintain minimum height above ground at all times
+                // This prevents the lying down portion from clipping through ground
+                float minHeightAboveGround = 0.8f; // Higher clearance for lying down animation
+
+                if (currentY < desiredY + minHeightAboveGround)
+                {
+                    Vector3 correctedPosition = transform.position;
+                    correctedPosition.y = desiredY + minHeightAboveGround;
+                    transform.position = correctedPosition;
+
+                    // Reset vertical velocity to prevent downward movement
+                    Vector3 velocity = rb.linearVelocity;
+                    velocity.y = Mathf.Max(velocity.y, 0); // Prevent negative Y velocity
+                    rb.linearVelocity = velocity;
+                }
+            }
+        }
+    }
+
     // --------------------------- Helper Methods ---------------------------
 
-    private bool HasAnimationClip(string clipName)
-    {
-        if (anim == null) return false;
-        
-        foreach (AnimationClip clip in anim.runtimeAnimatorController.animationClips)
-        {
-            if (clip.name == clipName)
-                return true;
-        }
-        return false;
-    }
+    private bool HasAnimationClip(string clipName) => 
+        _animationClipCache.ContainsKey(clipName);
+
 
     // --------------------------- Coroutines ---------------------------
 
     IEnumerator WaitForLanding()
     {
         yield return new WaitUntil(() => isGrounded);
-        
-        Debug.Log("[PlayerMovement] Landed from jump");
+
         anim.speed = 1f;
         anim.SetBool(JumpHash, false);
-        
+
         // Return to appropriate animation based on input state
         if (isRunning)
         {
-            Debug.Log("[PlayerMovement] Landing -> Running");
             anim.Play("Running - Crypto", 0, 0f);
         }
         else
         {
-            Debug.Log("[PlayerMovement] Landing -> Idle 2");
             anim.Play("Idle 2 - Crypto", 0, 0f);
         }
-        
+
         yield return new WaitForSeconds(jumpCooldown);
         isJumping = false;
     }
 
     IEnumerator WaitForStopAnimationToFinish()
     {
-        yield return new WaitForSeconds(0.4f);
+        AnimationClip clip = anim.GetCurrentAnimatorClipInfo(0)[0].clip;
+        yield return new WaitForSeconds(clip.length);
         isInRunToStopTransition = false;
-        
+
         if (!isRunning)
         {
-            Debug.Log("[PlayerMovement] Stop animation finished -> Idle 2");
             anim.Play("Idle 2 - Crypto", 0, 0f);
         }
     }
 
+    IEnumerator WaitForInitialIdleToFinish()
+    {
+        // var state = anim.GetCurrentAnimatorStateInfo(0);
+        yield return new WaitUntil(() => 
+            anim.GetCurrentAnimatorStateInfo(0).normalizedTime >= 0.99f
+        );
+        hasPlayedInitialIdle = true;
+        isPlayingInitialIdle = false;
+        rb.isKinematic = false;
+        anim.Play("Idle 2 - Crypto", 0, 0);
+    }
+
+    void OnAnimatorMove()
+    {
+        if (!anim) return;
+
+        if (isPlayingInitialIdle)
+        {
+            // Let the animation root motion handle positioning
+            transform.position += anim.deltaPosition;
+        }
+        else
+        {
+            rb.MovePosition(rb.position + anim.deltaPosition);
+        }
+    }
+    
     // --------------------------- Public Methods ---------------------------
 
     public float ReturnZAxis() => transform.position.z;
@@ -600,16 +618,14 @@ public class PlayerMovement : MonoBehaviour
         {
             lastGroundBeforeDeath = collision.gameObject;
         }
-        
+
         // Only trigger respawn for Environment Objects (hazards)
         if (collision.gameObject.CompareTag("Environment Objects"))
         {
-            Debug.Log($"Collision with hazard: {collision.gameObject.name}");
-            
             if (!isDeadOrRespawning)
             {
                 isDeadOrRespawning = true;
-                
+
                 if (respawnCount < maxRespawns)
                 {
                     StartCoroutine(RespawnSequence());
@@ -627,12 +643,10 @@ public class PlayerMovement : MonoBehaviour
         // Only trigger for specific death zones if they exist
         if (other.CompareTag("DeathZone"))
         {
-            Debug.Log($"Entered death zone: {other.gameObject.name}");
-            
             if (!isDeadOrRespawning)
             {
                 isDeadOrRespawning = true;
-                
+
                 if (respawnCount < maxRespawns)
                 {
                     StartCoroutine(RespawnSequence());
@@ -661,7 +675,6 @@ public class PlayerMovement : MonoBehaviour
         // Only trigger if somehow the main check in CheckGroundStatus failed
         if (transform.position.y < -10f)
         {
-            Debug.Log("[PlayerMovement] Secondary safety check triggered - player fell very far");
             isDeadOrRespawning = true;
 
             if (respawnCount < maxRespawns)
@@ -677,10 +690,11 @@ public class PlayerMovement : MonoBehaviour
 
     private IEnumerator RespawnSequence()
     {
-        Debug.Log("[PlayerMovement] Starting respawn sequence");
-        
         if (isDeadOrRespawning)
         {
+            // Increment respawn count FIRST to properly track lives
+            respawnCount++;
+
             if (respawnScreen) respawnScreen.SetActive(true);
             yield return new WaitForSeconds(0.5f);
 
@@ -688,38 +702,35 @@ public class PlayerMovement : MonoBehaviour
             {
                 Vector3 p = lastGroundBeforeDeath.transform.position;
                 transform.position = new Vector3(p.x, p.y + 3f, p.z);
-                Debug.Log($"[PlayerMovement] Respawned at ground position: {transform.position}");
             }
             else
             {
                 // Fallback spawn position
                 transform.position = new Vector3(0, 5f, 0);
-                Debug.Log("[PlayerMovement] Respawned at fallback position");
             }
 
             // Reset all physics and states
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            
+
             // Reset all animation states
             isFalling = false;
             fallingTimer = 0f;
             isJumping = false;
             isInRunToStopTransition = false;
+            actuallyFalling = false;
             justRespawned = true; // Mark as just respawned
-            
+
             // Force to Idle 2 animation
             anim.speed = 1f;
             anim.Play("Idle 2 - Crypto", 0, 0f);
             anim.SetBool(RunHash, false);
             anim.SetBool(JumpHash, false);
+            anim.SetBool(GroundedHash, true);
 
             isDeadOrRespawning = false;
-            respawnCount++;
 
             if (respawnScreen) respawnScreen.SetActive(false);
-
-            Debug.Log($"[PlayerMovement] Respawn complete - Position: {transform.position}, State: Idle 2");
         }
     }
 
@@ -736,18 +747,14 @@ public class PlayerMovement : MonoBehaviour
 
     private void TeleportToLastGround()
     {
-        Debug.Log("[TELEPORT] R button pressed - initiating teleport");
-        
         if (lastGroundBeforeDeath != null)
         {
             Vector3 teleportPosition = new Vector3(
-                lastGroundBeforeDeath.transform.position.x, 
-                lastGroundBeforeDeath.transform.position.y + 2f, 
+                lastGroundBeforeDeath.transform.position.x,
+                lastGroundBeforeDeath.transform.position.y + 2f,
                 lastGroundBeforeDeath.transform.position.z
             );
-            
-            Debug.Log($"[TELEPORT] Teleporting to last ground: {lastGroundBeforeDeath.name} at position {teleportPosition}");
-            
+
             // Reset all states
             isRunning = false;
             isJumping = false;
@@ -756,29 +763,29 @@ public class PlayerMovement : MonoBehaviour
             isInRunToStopTransition = false;
             justRespawned = false;
             fallingTimer = 0f;
-            
+            rb.isKinematic = false; // Ensure physics reactivates
+            isPlayingInitialIdle = false;
+            hasPlayedInitialIdle = true;
+
             // Reset physics
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            
+
             // Teleport player
             transform.position = teleportPosition;
-            
+
             // Force Idle 2 animation
             anim.speed = 1f;
             anim.Play("Idle 2 - Crypto", 0, 0f);
             anim.SetBool(RunHash, false);
             anim.SetBool(JumpHash, false);
             anim.SetBool(GroundedHash, true);
-            
-            Debug.Log($"[TELEPORT] Teleport complete - New position: {transform.position}, State: Idle 2");
         }
         else
         {
             // Fallback teleport to origin
             Vector3 fallbackPosition = new Vector3(0, 5f, 0);
-            Debug.LogWarning($"[TELEPORT] No last ground found, teleporting to fallback position: {fallbackPosition}");
-            
+
             // Reset all states
             isRunning = false;
             isJumping = false;
@@ -787,22 +794,20 @@ public class PlayerMovement : MonoBehaviour
             isInRunToStopTransition = false;
             justRespawned = false;
             fallingTimer = 0f;
-            
+
             // Reset physics
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            
+
             // Teleport player
             transform.position = fallbackPosition;
-            
+
             // Force Idle 2 animation
             anim.speed = 1f;
             anim.Play("Idle 2 - Crypto", 0, 0f);
             anim.SetBool(RunHash, false);
             anim.SetBool(JumpHash, false);
             anim.SetBool(GroundedHash, true);
-            
-            Debug.Log($"[TELEPORT] Fallback teleport complete - Position: {transform.position}");
         }
     }
 }

@@ -21,13 +21,13 @@ public class AgentAttraction : MonoBehaviour
     {
         if (_agent == null)
         {
-            Debug.LogWarning("NavMeshAgent component is missing on this GameObject.");
+            // Debug.LogWarning("NavMeshAgent component is missing on this GameObject.");
             return;
         }
 
         if (target == null)
         {
-            Debug.LogWarning("Target Transform is not assigned.");
+            // Debug.LogWarning("Target Transform is not assigned.");
             return;
         }
         _agent.destination = target.position;

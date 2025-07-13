@@ -117,7 +117,7 @@ public class ProceduralTerrain : MonoBehaviour
 
     private void StartSpawning()
     {
-        //Debug.Log("Time Check ===== " + Time.time);
+        //// Debug.Log("Time Check ===== " + Time.time);
         _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + groundTileLength));
 
         if (skyboxChanger == null)
@@ -128,11 +128,11 @@ public class ProceduralTerrain : MonoBehaviour
         /* -------- choose ground that matches the current skybox -------- */
         int idx = skyboxChanger ? skyboxChanger.CurrentSkyboxIdx : 0; // 0-6
         string path = $"Prefabs/Shuffled Prefabs/Variant {variantIdx}/Ground_{variantIdx}";
-        Debug.Log($"Loading ground prefab from path: {path}");
+        // Debug.Log($"Loading ground prefab from path: {path}");
         GameObject groundPrefab = Resources.Load<GameObject>(path);
         if (groundPrefab == null)
         {
-            Debug.LogError($"Ground prefab not found at {path}");
+            // Debug.LogError($"Ground prefab not found at {path}");
             groundPrefab = _ground; // fall back to whatever was set
         }
 

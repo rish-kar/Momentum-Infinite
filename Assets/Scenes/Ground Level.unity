@@ -236,6 +236,10 @@ MonoBehaviour:
   _treePrefab: {fileID: 6623987512302700719, guid: 3b32d91022ba3ec4281b5e6172977588,
     type: 3}
   _stopSpawningTerrain: 0
+  spawnDistanceAhead: 500
+  minSpawnRate: 0.1
+  maxSpawnRate: 1
+  groundTileLength: 96
   ghostRunnerAgent: {fileID: 920161669}
   _player: {fileID: 1076822217}
   _canFire: -1
@@ -1669,7 +1673,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   player: {fileID: 1076822218}
-  offset: {x: 0, y: 4.06, z: 0}
+  offset: {x: 0, y: 17.8, z: 0}
+  followSpeed: 5
+  useSmoothing: 1
 --- !u!1 &920161667
 GameObject:
   m_ObjectHideFlags: 0
@@ -2055,18 +2061,19 @@ MonoBehaviour:
   maxSpeed: 300
   acceleration: 2
   forwardForceMultiplier: 0.5
+  constantForwardSpeed: 8
   sideSpeed: 80
   jumpForce: 20
   jumpForwardBoost: 200
   jumpCooldown: 1
   rb: {fileID: 1076822222}
+  anim: {fileID: 1076822224}
   feet: {fileID: 1616032160}
   groundRadius: 0.25
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
   groundedRay: 0.1
-  anim: {fileID: 1076822224}
   environmentUpdateInterval: 150
   maxRespawns: 3
   respawnScreen: {fileID: 806949838}
@@ -2089,6 +2096,10 @@ MonoBehaviour:
   _treePrefab: {fileID: 6623987512302700719, guid: 3b32d91022ba3ec4281b5e6172977588,
     type: 3}
   _stopSpawningTerrain: 0
+  spawnDistanceAhead: 500
+  minSpawnRate: 0.1
+  maxSpawnRate: 1
+  groundTileLength: 96
   ghostRunnerAgent: {fileID: 920161669}
   _player: {fileID: 1677758147}
   _canFire: -1
@@ -2895,6 +2906,10 @@ MonoBehaviour:
   _treePrefab: {fileID: 6623987512302700719, guid: 3b32d91022ba3ec4281b5e6172977588,
     type: 3}
   _stopSpawningTerrain: 0
+  spawnDistanceAhead: 500
+  minSpawnRate: 0.1
+  maxSpawnRate: 1
+  groundTileLength: 96
   ghostRunnerAgent: {fileID: 920161669}
   _player: {fileID: 1677758147}
   _canFire: -1
@@ -2917,18 +2932,19 @@ MonoBehaviour:
   maxSpeed: 300
   acceleration: 2
   forwardForceMultiplier: 0.5
+  constantForwardSpeed: 8
   sideSpeed: 80
   jumpForce: 20
   jumpForwardBoost: 200
   jumpCooldown: 1
   rb: {fileID: 0}
+  anim: {fileID: 0}
   feet: {fileID: 0}
   groundRadius: 0.25
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
   groundedRay: 0.1
-  anim: {fileID: 0}
   environmentUpdateInterval: 150
   maxRespawns: 3
   respawnScreen: {fileID: 806949838}
@@ -3280,7 +3296,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2007580605
 Transform:
   m_ObjectHideFlags: 0
