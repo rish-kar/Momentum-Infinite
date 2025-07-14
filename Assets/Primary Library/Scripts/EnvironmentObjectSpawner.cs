@@ -29,6 +29,10 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
 
     [SerializeField] private LayerMask groundMask = ~0;   // default = everything
 
+    [Header("Debug Settings")]
+    [SerializeField] private bool debugSpawning = false;
+    [SerializeField] private bool forceSpawn = false; // Force spawning even if percentage is low
+
     /*──────────── Private / cached ───────────────────────────────────*/
     SkyboxChanger skyboxChanger;
     static readonly Regex pfRegex = new("^PF_(\\d+)_", RegexOptions.Compiled);
@@ -40,20 +44,51 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
     void Awake()
     {
         skyboxChanger = FindObjectOfType<SkyboxChanger>();
-        if (!skyboxChanger)
-            // Debug.LogWarning("SkyboxChanger not found – defaulting to variant 0.");
+        if (!skyboxChanger && debugSpawning)
+            Debug.LogWarning("SkyboxChanger not found – defaulting to variant 0.", this);
 
-        if (PrefabCache.Count == 0) BuildPrefabCache();
+        if (PrefabCache.Count == 0) 
+        {
+            BuildPrefabCache();
+            if (debugSpawning)
+            {
+                Debug.Log($"Built prefab cache with {PrefabCache.Count} variants", this);
+                foreach (var kvp in PrefabCache)
+                {
+                    Debug.Log($"Variant {kvp.Key}: {kvp.Value.Count} prefabs", this);
+                }
+            }
+        }
     }
 
     static void BuildPrefabCache()
     {
         var all = Resources.LoadAll<GameObject>("Prefabs/Shuffled Prefabs");
+        if (all.Length == 0)
+        {
+            Debug.LogError("No prefabs found in Resources/Prefabs/Shuffled Prefabs! Objects will not spawn.");
+            return;
+        }
+        
         foreach (var go in all)
         {
             if (!go) continue;
             var m = pfRegex.Match(go.name);
-            if (!m.Success) continue;
+            if (!m.Success) 
+            {
+                // Try fallback naming pattern
+                if (go.name.Contains("PF_"))
+                {
+                    Debug.LogWarning($"Prefab {go.name} doesn't match expected pattern PF_X_, adding to variant 0");
+                    if (!PrefabCache.TryGetValue(0, out var list0))
+                    {
+                        list0 = new List<GameObject>();
+                        PrefabCache[0] = list0;
+                    }
+                    list0.Add(go);
+                }
+                continue;
+            }
             int variant = int.Parse(m.Groups[1].Value);
             if (!PrefabCache.TryGetValue(variant, out var list))
             {
@@ -62,6 +97,8 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
             }
             list.Add(go);
         }
+        
+        Debug.Log($"Prefab cache built: {PrefabCache.Count} variants, {all.Length} total prefabs processed");
     }
 
     /*──────────── Public API ─────────────────────────────────────────*/
@@ -71,25 +108,48 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
     /// </summary>
     public void SpawnObjectsOnGround(GameObject ground)
     {
-        if (!ground) return;
+        if (!ground) 
+        {
+            if (debugSpawning) Debug.LogWarning("SpawnObjectsOnGround called with null ground!", this);
+            return;
+        }
 
         int variant = skyboxChanger ? skyboxChanger.CurrentSkyboxIdx : 0;
         if (!PrefabCache.TryGetValue(variant, out var prefabs) || prefabs.Count == 0)
-            return; // nothing for current environment
+        {
+            if (debugSpawning) Debug.LogWarning($"No prefabs available for variant {variant}", this);
+            // Try fallback to variant 0
+            if (variant != 0 && PrefabCache.TryGetValue(0, out var fallbackPrefabs) && fallbackPrefabs.Count > 0)
+            {
+                prefabs = fallbackPrefabs;
+                if (debugSpawning) Debug.Log($"Using fallback variant 0 prefabs ({prefabs.Count} available)", this);
+            }
+            else
+            {
+                return; // nothing for current environment
+            }
+        }
 
         if (!ground.TryGetComponent(out Collider groundCol))
         {
-            // Debug.LogWarning("Ground passed to SpawnObjectsOnGround has no collider!");
+            if (debugSpawning) Debug.LogWarning("Ground passed to SpawnObjectsOnGround has no collider!", this);
             return;
         }
 
         // Build a simple 1‑D WFC grid along the X‑axis of the tile.
         float width = xRange.y - xRange.x;
         int cells = Mathf.Max(Mathf.CeilToInt(width), 12); // at least 1m resolution
-        int desired = Mathf.Clamp(Mathf.FloorToInt(cells * (spawnPercentage * 0.01f)), 0, cells);
+        float actualSpawnPercentage = forceSpawn ? 100f : spawnPercentage;
+        int desired = Mathf.Clamp(Mathf.FloorToInt(cells * (actualSpawnPercentage * 0.01f)), 0, cells);
+
+        if (debugSpawning) 
+        {
+            Debug.Log($"Spawning objects on ground {ground.name}: {cells} cells, {desired} desired spawns", this);
+        }
 
         HashSet<int> collapsed = new();
         int attempts = 0;
+        int actualSpawned = 0;
         while (collapsed.Count < desired && attempts++ < cells * 5)
         {
             int i = Random.Range(0, cells);
@@ -115,14 +175,52 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
             if (!inst.TryGetComponent(out DespawnAfterPlayer _))
             {
                 var d = inst.AddComponent<DespawnAfterPlayer>();
-                d.player = Camera.main ? Camera.main.transform : null;
+                // Try multiple methods to find player
+                d.player = FindPlayerTransform();
             }
                 
             // Lightweight WFC – block current cell and immediate neighbours.
             collapsed.Add(i);
             if (i > 0) collapsed.Add(i - 1);
             if (i < cells - 1) collapsed.Add(i + 1);
+            
+            actualSpawned++;
         }
+        
+        if (debugSpawning)
+        {
+            Debug.Log($"Spawned {actualSpawned} objects on ground {ground.name} (desired: {desired})", this);
+        }
+    }
+    
+    private Transform FindPlayerTransform()
+    {
+        // Multiple fallback methods to find player
+        Transform playerTransform = null;
+        
+        // Method 1: Camera.main
+        if (Camera.main) playerTransform = Camera.main.transform;
+        
+        // Method 2: Player tag
+        if (!playerTransform)
+        {
+            var playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj) playerTransform = playerObj.transform;
+        }
+        
+        // Method 3: PlayerMovement component
+        if (!playerTransform)
+        {
+            var playerMovement = FindFirstObjectByType<PlayerMovement>();
+            if (playerMovement) playerTransform = playerMovement.transform;
+        }
+        
+        if (!playerTransform && debugSpawning)
+        {
+            Debug.LogWarning("Could not find player transform for DespawnAfterPlayer component!", this);
+        }
+        
+        return playerTransform;
     }
     
     void SnapToGround(Transform t)
@@ -148,7 +246,7 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
 
 /*─────────────────────────────────────────────────────────────────────────*/
 /// <summary>
-/// Tiny component that deletes the GameObject once the player’s Z‑position is
+/// Tiny component that deletes the GameObject once the player's Z‑position is
 /// far enough ahead.  Keeps memory & physics tidy even if a tile is kept alive
 /// for longer than the prop.
 /// </summary>
@@ -161,8 +259,22 @@ public class DespawnAfterPlayer : MonoBehaviour
     {
         if (!player)
         {
+            // Try multiple methods to find player
             var p = GameObject.FindGameObjectWithTag("Player");
-            if (p) player = p.transform;
+            if (p) 
+            {
+                player = p.transform;
+            }
+            else
+            {
+                var playerMovement = FindFirstObjectByType<PlayerMovement>();
+                if (playerMovement) player = playerMovement.transform;
+            }
+            
+            if (!player)
+            {
+                Debug.LogWarning($"DespawnAfterPlayer on {gameObject.name} could not find player!", this);
+            }
         }
     }
 
@@ -170,6 +282,8 @@ public class DespawnAfterPlayer : MonoBehaviour
     {
         if (!player) return;
         if (player.position.z - transform.position.z > despawnOffset)
+        {
             Destroy(gameObject);
+        }
     }
 }

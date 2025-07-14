@@ -6,13 +6,16 @@ public class UnifiedCameraController : MonoBehaviour
     public Transform player;
     
     [Header("Camera Follow Settings")]
-    [SerializeField] private float followSpeed = 5f; // Using 1/followSpeed for SmoothDamp
+    [SerializeField] private float followSpeed = 5f;
     [SerializeField] private bool useSmoothing = true;
     
     [Header("Camera Mode Settings")]
-    [SerializeField] private Vector3 offset3D = new Vector3(0f, 4.62f, -3.18f);
+    [SerializeField] private Vector3 offset3D = new Vector3(0f, 8.75f, -2f); // Fixed offset as requested
     [SerializeField] private Vector3 offset2D = new Vector3(0f, 11.3f, 6.3f);
     [SerializeField] private float transitionDuration = 1.0f;
+    
+    [Header("Debug Settings")]
+    [SerializeField] private bool debugCamera = false;
     
     // Internal state
     private Vector3 currentOffset;
@@ -21,7 +24,8 @@ public class UnifiedCameraController : MonoBehaviour
     private bool is2D = false;
     private Vector3 lastOffset3D;
     private Vector3 lastOffset2D;
-    private PlayerMovement playerMovement; // Reference to player script
+    private PlayerMovement playerMovement;
+    private Vector3 initialPlayerPosition; // Store initial player position for X reference
     
     // Transition state
     private bool isTransitioning = false;
@@ -32,33 +36,68 @@ public class UnifiedCameraController : MonoBehaviour
 
     void Start()
     {
-        // Validate player reference
+        InitializeCamera();
+    }
+    
+    private void InitializeCamera()
+    {
+        // Validate player reference with multiple fallback methods
         if (player == null)
         {
-            // Try to find player automatically
-            var playerObject = FindFirstObjectByType<PlayerMovement>();
-            if (playerObject == null)
+            // Method 1: Find by tag
+            var playerObject = GameObject.FindGameObjectWithTag("Player");
+            if (playerObject != null)
             {
-                Debug.LogError("CRITICAL: Player with PlayerMovement script not found in scene. Camera cannot follow.", this);
-                enabled = false; // Disable this component if no player is found
-                return;
+                player = playerObject.transform;
+                playerMovement = playerObject.GetComponent<PlayerMovement>();
             }
-            player = playerObject.transform;
-            Debug.Log($"Player auto-assigned: {player.name}", this);
+            else
+            {
+                // Method 2: Find by PlayerMovement component
+                playerMovement = FindFirstObjectByType<PlayerMovement>();
+                if (playerMovement != null)
+                {
+                    player = playerMovement.transform;
+                }
+            }
+            
+            if (player != null && debugCamera)
+            {
+                Debug.Log($"Player auto-assigned: {player.name}", this);
+            }
+        }
+
+        if (player == null)
+        {
+            Debug.LogError("CRITICAL: Player with PlayerMovement script not found in scene. Camera cannot follow.", this);
+            enabled = false;
+            return;
         }
 
         // Store the camera's initial rotation for 3D mode
         originalRotation = transform.rotation;
+        
+        // Store initial player position for X reference
+        initialPlayerPosition = player.position;
         
         // Initialize with 3D offset
         currentOffset = offset3D;
         lastOffset3D = offset3D;
         lastOffset2D = offset2D;
         
-        // Set initial position immediately to prevent first-frame jitter
-        transform.position = player.position + currentOffset;
+        // Set initial position immediately with correct X positioning
+        Vector3 targetPos = new Vector3(
+            initialPlayerPosition.x, // Same X as initial player position
+            player.position.y + currentOffset.y,
+            player.position.z + currentOffset.z
+        );
+        transform.position = targetPos;
         
-        Debug.Log($"UnifiedCameraController initialized. Player: {player.name}, Initial offset: {currentOffset}, Camera pos: {transform.position}", this);
+        if (debugCamera)
+        {
+            Debug.Log($"UnifiedCameraController initialized. Player: {player.name}, " +
+                     $"Initial offset: {currentOffset}, Camera pos: {transform.position}", this);
+        }
     }
 
     void OnValidate()
@@ -70,15 +109,19 @@ public class UnifiedCameraController : MonoBehaviour
             {
                 currentOffset = offset3D;
                 lastOffset3D = offset3D;
-                transform.position = player.position + currentOffset; // Apply immediately
-                Debug.Log($"3D Offset updated to: {offset3D}", this);
+                if (debugCamera)
+                {
+                    Debug.Log($"3D Offset updated to: {offset3D}", this);
+                }
             }
             else if (is2D && offset2D != lastOffset2D)
             {
                 currentOffset = offset2D;
                 lastOffset2D = offset2D;
-                transform.position = player.position + currentOffset; // Apply immediately
-                Debug.Log($"2D Offset updated to: {offset2D}", this);
+                if (debugCamera)
+                {
+                    Debug.Log($"2D Offset updated to: {offset2D}", this);
+                }
             }
         }
     }
@@ -88,7 +131,7 @@ public class UnifiedCameraController : MonoBehaviour
         // Always check for player, disable if it gets destroyed
         if (player == null) 
         {
-            if(enabled) Debug.LogError("Player reference lost. Disabling camera controller.", this);
+            if(enabled && debugCamera) Debug.LogError("Player reference lost. Disabling camera controller.", this);
             enabled = false;
             return;
         }
@@ -120,9 +163,25 @@ public class UnifiedCameraController : MonoBehaviour
     
     private void FollowPlayer()
     {
-        Vector3 targetPosition = player.position + currentOffset;
+        // Calculate target position with proper X axis handling
+        Vector3 targetPosition;
         
-        // Use Lerp for smoothing if enabled. It's generally more stable than SmoothDamp for camera follow.
+        if (is2D)
+        {
+            // In 2D mode, follow normally
+            targetPosition = player.position + currentOffset;
+        }
+        else
+        {
+            // In 3D mode, use initial player X position, follow Y and Z
+            targetPosition = new Vector3(
+                initialPlayerPosition.x, // Same X as initial player position
+                player.position.y + currentOffset.y,
+                player.position.z + currentOffset.z
+            );
+        }
+        
+        // Apply smoothing if enabled
         if (useSmoothing)
         {
             transform.position = Vector3.Lerp(transform.position, targetPosition, followSpeed * Time.deltaTime);
@@ -130,6 +189,13 @@ public class UnifiedCameraController : MonoBehaviour
         else
         {
             transform.position = targetPosition;
+        }
+        
+        if (debugCamera && Time.frameCount % 60 == 0) // Log once per second
+        {
+            Debug.Log($"Camera following - Mode: {(is2D ? "2D" : "3D")}, " +
+                     $"Player pos: {player.position}, Camera pos: {transform.position}, " +
+                     $"Target pos: {targetPosition}", this);
         }
     }
     
@@ -146,111 +212,53 @@ public class UnifiedCameraController : MonoBehaviour
         Vector3 targetOffset = is2D ? offset2D : offset3D;
         targetRotation = is2D ? Quaternion.Euler(90f, 0f, 0f) : originalRotation;
         
-        Debug.Log($"Starting camera transition to {(is2D ? "2D" : "3D")} mode");
+        // Update current offset for the transition
+        currentOffset = targetOffset;
+        
+        if (debugCamera)
+        {
+            Debug.Log($"Starting camera transition to {(is2D ? "2D" : "3D")} mode. " +
+                     $"From offset: {startOffset} to {targetOffset}", this);
+        }
     }
     
     private void UpdateTransition()
     {
         transitionTimer += Time.deltaTime;
-        float t = Mathf.Clamp01(transitionTimer / transitionDuration);
+        float t = transitionTimer / transitionDuration;
         
-        // Smoothly interpolate offset and rotation
-        Vector3 targetOffset = is2D ? offset2D : offset3D;
-        currentOffset = Vector3.Lerp(startOffset, targetOffset, t);
-        transform.rotation = Quaternion.Slerp(startRotation, targetRotation, t);
-        
-        // CRITICAL: During transition, we must also update the position continuously
-        transform.position = player.position + currentOffset;
-        
-        // End transition when complete
         if (t >= 1f)
         {
-            EndTransition();
+            // Transition complete
+            t = 1f;
+            isTransitioning = false;
+            
+            if (debugCamera)
+            {
+                Debug.Log($"Camera transition to {(is2D ? "2D" : "3D")} mode completed", this);
+            }
         }
-    }
-    
-    private void EndTransition()
-    {
-        isTransitioning = false;
         
-        // Ensure final values are set
-        currentOffset = is2D ? offset2D : offset3D;
-        transform.rotation = targetRotation;
+        // Smoothly interpolate offset and rotation
+        Vector3 currentTargetOffset = Vector3.Lerp(startOffset, currentOffset, t);
+        Quaternion currentTargetRotation = Quaternion.Slerp(startRotation, targetRotation, t);
         
-        // Reset velocity for smooth resumption of following
-        velocity = Vector3.zero;
-        
-        Debug.Log($"Camera transition completed. Mode: {(is2D ? "2D" : "3D")}");
-    }
-    
-    private void ApplyImmediatePosition()
-    {
-        if (player == null) return;
-        transform.position = player.position + currentOffset;
-        velocity = Vector3.zero;
-    }
-    
-    // Public methods for external control
-    public void SetOffset(Vector3 newOffset)
-    {
-        if (isTransitioning) return; // Don't allow offset changes during transitions
-        
-        currentOffset = newOffset;
-        ApplyImmediatePosition();
-        Debug.Log($"Camera offset set manually to: {newOffset}");
-    }
-    
-    public void SetMode2D(bool enable2D)
-    {
-        if (is2D == enable2D || isTransitioning) return;
-        
-        is2D = enable2D;
-        BeginTransition();
-    }
-    
-    public bool Is2DMode()
-    {
-        return is2D;
-    }
-    
-    public bool IsTransitioning()
-    {
-        return isTransitioning;
-    }
-    
-    // Force enable method for debugging
-    [ContextMenu("Reset to 3D Mode")]
-    public void ResetTo3D()
-    {
-        is2D = false;
-        isTransitioning = false;
-        currentOffset = offset3D;
-        transform.rotation = originalRotation;
-        ApplyImmediatePosition();
-        Debug.Log("Camera reset to 3D mode");
-    }
-    
-    [ContextMenu("Switch to 2D Mode")]
-    public void SwitchTo2D()
-    {
-        if (!is2D && !isTransitioning)
+        // Apply position based on interpolated offset
+        Vector3 targetPosition;
+        if (is2D)
         {
-            is2D = true;
-            BeginTransition();
-        }
-    }
-    
-    [ContextMenu("Force Update Camera Position")]
-    public void ForceUpdatePosition()
-    {
-        if (player != null)
-        {
-            ApplyImmediatePosition();
-            Debug.Log("Camera position force updated", this);
+            targetPosition = player.position + currentTargetOffset;
         }
         else
         {
-            Debug.LogWarning("Cannot force update position, player reference is missing.", this);
+            targetPosition = new Vector3(
+                initialPlayerPosition.x,
+                player.position.y + currentTargetOffset.y,
+                player.position.z + currentTargetOffset.z
+            );
         }
+        
+        transform.position = targetPosition;
+        transform.rotation = currentTargetRotation;
     }
 }

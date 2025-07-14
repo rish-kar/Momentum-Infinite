@@ -49,12 +49,17 @@ public class ProceduralTerrain : MonoBehaviour
     [Header("Script References")] [SerializeField]
     private SkyboxChanger skyboxChanger;
 
+    [Header("Debug Settings")]
+    [SerializeField] private bool debugTerrain = false;
+    [SerializeField] private bool debugObjectSpawning = false;
+
     // Private variables for terrain spawning logic
     private float _newgroundZAxis;
     private float _newgroundXAxis;
     private Vector3 _previousGroundLoc;
     private Vector3 _positionOfGround;
     private float lastPlayerZ; // Track player's last position for speed calculation
+    private EnvironmentObjectSpawnManager objectSpawnManager; // Cache the spawn manager
 
     private void Awake()
     {
@@ -63,6 +68,15 @@ public class ProceduralTerrain : MonoBehaviour
             if (_player == null)
             {
                 _player = GameObject.FindGameObjectWithTag("Player");
+                if (_player == null)
+                {
+                    // Fallback: find by PlayerMovement component
+                    var playerMovement = FindFirstObjectByType<PlayerMovement>();
+                    if (playerMovement != null)
+                    {
+                        _player = playerMovement.gameObject;
+                    }
+                }
             }
 
             _previousGround = GameObject.FindGameObjectWithTag("Initial Ground");
@@ -75,6 +89,21 @@ public class ProceduralTerrain : MonoBehaviour
             if (_treePrefab == null)
             {
                 _treePrefab = GameObject.FindGameObjectWithTag("Environment Objects");
+            }
+            
+            // Cache the EnvironmentObjectSpawnManager
+            objectSpawnManager = FindFirstObjectByType<EnvironmentObjectSpawnManager>();
+            if (objectSpawnManager == null && debugObjectSpawning)
+            {
+                Debug.LogWarning("EnvironmentObjectSpawnManager not found in scene! Objects will not spawn.", this);
+            }
+            
+            // Log initialization status
+            if (debugTerrain)
+            {
+                Debug.Log($"ProceduralTerrain initialized - Player: {(_player ? _player.name : "NULL")}, " +
+                         $"Ground Container: {(_groundContainer ? _groundContainer.name : "NULL")}, " +
+                         $"Object Spawn Manager: {(objectSpawnManager ? "Found" : "NULL")}", this);
             }
         }
 
@@ -90,6 +119,15 @@ public class ProceduralTerrain : MonoBehaviour
 
     void Update()
     {
+        if (_player == null)
+        {
+            if (debugTerrain && Time.frameCount % 60 == 0) // Log once per second
+            {
+                Debug.LogError("Player reference lost in ProceduralTerrain!", this);
+            }
+            return;
+        }
+        
         _positionOfGround = _previousGround.transform.position;
 
         if (_positionOfGround.z > _player.transform.position.z + 1000)
@@ -117,22 +155,32 @@ public class ProceduralTerrain : MonoBehaviour
 
     private void StartSpawning()
     {
-        //// Debug.Log("Time Check ===== " + Time.time);
+        if (debugTerrain)
+        {
+            Debug.Log($"StartSpawning called - Time: {Time.time}, Player Z: {_player.transform.position.z}", this);
+        }
+        
         _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + groundTileLength));
 
         if (skyboxChanger == null)
-            skyboxChanger = FindObjectOfType<SkyboxChanger>();
+            skyboxChanger = FindFirstObjectByType<SkyboxChanger>();
 
         int variantIdx = skyboxChanger ? skyboxChanger.CurrentSkyboxIdx : 0;
 
         /* -------- choose ground that matches the current skybox -------- */
-        int idx = skyboxChanger ? skyboxChanger.CurrentSkyboxIdx : 0; // 0-6
         string path = $"Prefabs/Shuffled Prefabs/Variant {variantIdx}/Ground_{variantIdx}";
-        // Debug.Log($"Loading ground prefab from path: {path}");
+        if (debugTerrain)
+        {
+            Debug.Log($"Loading ground prefab from path: {path}", this);
+        }
+        
         GameObject groundPrefab = Resources.Load<GameObject>(path);
         if (groundPrefab == null)
         {
-            // Debug.LogError($"Ground prefab not found at {path}");
+            if (debugTerrain)
+            {
+                Debug.LogWarning($"Ground prefab not found at {path}, using fallback", this);
+            }
             groundPrefab = _ground; // fall back to whatever was set
         }
 
@@ -140,8 +188,32 @@ public class ProceduralTerrain : MonoBehaviour
         //Spawning New Ground
         GameObject _newGround = Instantiate(groundPrefab, _previousGroundLoc, Quaternion.identity);
 
-        var mgr = FindObjectOfType<EnvironmentObjectSpawnManager>();
-        if (mgr) mgr.SpawnObjectsOnGround(_newGround);
+        // Spawn objects on the new ground
+        if (objectSpawnManager != null)
+        {
+            objectSpawnManager.SpawnObjectsOnGround(_newGround);
+            if (debugObjectSpawning)
+            {
+                Debug.Log($"Called SpawnObjectsOnGround for {_newGround.name}", this);
+            }
+        }
+        else
+        {
+            // Try to find the spawn manager again (in case it was created after this script)
+            objectSpawnManager = FindFirstObjectByType<EnvironmentObjectSpawnManager>();
+            if (objectSpawnManager != null)
+            {
+                objectSpawnManager.SpawnObjectsOnGround(_newGround);
+                if (debugObjectSpawning)
+                {
+                    Debug.Log($"Found spawn manager and called SpawnObjectsOnGround for {_newGround.name}", this);
+                }
+            }
+            else if (debugObjectSpawning)
+            {
+                Debug.LogWarning($"No EnvironmentObjectSpawnManager found - objects not spawned on {_newGround.name}", this);
+            }
+        }
 
         _newgroundZAxis = _newGround.transform.position.z;
         _newgroundXAxis = _newGround.transform.position.x;
@@ -168,10 +240,17 @@ public class ProceduralTerrain : MonoBehaviour
         }
 
         AdjustSpawnRate();
+        
+        if (debugTerrain)
+        {
+            Debug.Log($"Spawned new ground: {_newGround.name} at position {_newGround.transform.position}", this);
+        }
     }
 
     private void AdjustSpawnRate()
     {
+        if (_player == null) return;
+        
         // Calculate the player's speed based on their movement since the last frame
         float playerSpeed = Mathf.Abs(_player.transform.position.z - lastPlayerZ) / Time.deltaTime;
 
@@ -179,6 +258,11 @@ public class ProceduralTerrain : MonoBehaviour
         _timeRate = Mathf.Clamp(maxSpawnRate - playerSpeed * 0.01f, minSpawnRate, maxSpawnRate);
 
         lastPlayerZ = _player.transform.position.z;
+        
+        if (debugTerrain && Time.frameCount % 120 == 0) // Log every 2 seconds
+        {
+            Debug.Log($"Player speed: {playerSpeed:F2}, Spawn rate: {_timeRate:F2}", this);
+        }
     }
 
     // public void SpawnATree()

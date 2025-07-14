@@ -246,6 +246,8 @@ MonoBehaviour:
   _timeRate: 1
   navMeshSurface: {fileID: 1315532083}
   skyboxChanger: {fileID: 1219907408}
+  debugTerrain: 0
+  debugObjectSpawning: 0
 --- !u!1 &59315890
 GameObject:
   m_ObjectHideFlags: 0
@@ -820,7 +822,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 16777215
+    rgba: 4294967295
   m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -1000,7 +1002,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &578818518
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1094,7 +1096,7 @@ GameObject:
   - component: {fileID: 631977132}
   m_Layer: 0
   m_Name: Environment Object Spawn Manager
-  m_TagString: Untagged
+  m_TagString: Environment Objects
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1134,6 +1136,8 @@ MonoBehaviour:
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  debugSpawning: 0
+  forceSpawn: 0
 --- !u!1 &640395740
 GameObject:
   m_ObjectHideFlags: 0
@@ -1184,8 +1188,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78db7707ca1827a44b0e73e43402235a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 1677758153}
+  player: {fileID: 1076822218}
   score: {fileID: 640395743}
+  scoreOffset: 45
+  debugScore: 0
 --- !u!114 &640395743
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1467,7 +1473,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &806949839
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1661,6 +1667,7 @@ MonoBehaviour:
   offset3D: {x: 0, y: 4.62, z: -3.18}
   offset2D: {x: 0, y: 11.3, z: 6.3}
   transitionDuration: 1
+  debugCamera: 0
 --- !u!1 &920161667
 GameObject:
   m_ObjectHideFlags: 0
@@ -2042,27 +2049,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16fbc29d40fccdf4ab0ee30ee08274fc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  baseSpeed: 6
-  maxSpeed: 20
-  acceleration: 15
-  forwardForceMultiplier: 22
-  constantForwardSpeed: 8
-  sideSpeed: 18
-  jumpForce: 7
-  jumpForwardBoost: 4
-  jumpCooldown: 0.1
+  runSpeed: 30
+  sideSpeed: 5
+  jumpForce: 15
+  jumpForwardBoost: 30
+  leanAngle: 15
+  leanSpeed: 8
+  playerModel: {fileID: 1076822218}
   rb: {fileID: 1076822222}
   anim: {fileID: 1076822224}
   feet: {fileID: 1616032160}
-  groundRadius: 0.25
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  groundedRay: 0.15
-  environmentUpdateInterval: 150
-  maxRespawns: 3
-  respawnScreen: {fileID: 59315890}
-  isJumping: 0
+  groundCheckDistance: 0.3
+  debugMovement: 0
 --- !u!114 &1076822221
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2091,6 +2092,8 @@ MonoBehaviour:
   _timeRate: 1
   navMeshSurface: {fileID: 1315532083}
   skyboxChanger: {fileID: 1219907408}
+  debugTerrain: 0
+  debugObjectSpawning: 0
 --- !u!54 &1076822222
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2215,7 +2218,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 50331647
+    rgba: 4294967295
   m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -2901,6 +2904,8 @@ MonoBehaviour:
   _timeRate: 1
   navMeshSurface: {fileID: 1315532083}
   skyboxChanger: {fileID: 1219907408}
+  debugTerrain: 0
+  debugObjectSpawning: 0
 --- !u!114 &1677758155
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2913,27 +2918,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16fbc29d40fccdf4ab0ee30ee08274fc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseSpeed: 50
-  maxSpeed: 300
-  acceleration: 2
-  forwardForceMultiplier: 0.5
-  constantForwardSpeed: 8
+  runSpeed: 8
   sideSpeed: 80
   jumpForce: 20
   jumpForwardBoost: 200
-  jumpCooldown: 1
+  leanAngle: 15
+  leanSpeed: 8
+  playerModel: {fileID: 0}
   rb: {fileID: 0}
   anim: {fileID: 0}
   feet: {fileID: 0}
-  groundRadius: 0.25
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  groundedRay: 0.1
-  environmentUpdateInterval: 150
-  maxRespawns: 3
-  respawnScreen: {fileID: 806949838}
-  isJumping: 0
+  groundCheckDistance: 0.3
+  debugMovement: 0
 --- !u!1 &1766993847
 GameObject:
   m_ObjectHideFlags: 0
@@ -3366,7 +3365,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4060086271
+    rgba: 4294967295
   m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3

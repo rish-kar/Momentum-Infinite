@@ -22,20 +22,23 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private LayerMask groundMask = ~0;
     [SerializeField] private float groundCheckDistance = 0.3f;
     
+    [Header("Debug")]
+    [SerializeField] private bool debugMovement = false;
+    
+    // Animation states
+    private enum AnimationState { Idle, Running, Left, Right, Jumping, Falling }
+    private AnimationState currentAnimState;
+    
     // Movement state
-    private bool isGrounded;
+    private bool isGrounded = true;
     private bool isRunning;
     private bool isJumping;
-    private bool wasRunningBeforeJump;
-    private bool isFalling;
     private float horizontalInput;
-    
-    // Animation hashes
-    private static readonly int JumpHash = Animator.StringToHash("Jump");
     
     void Start()
     {
         InitializeComponents();
+        currentAnimState = AnimationState.Idle; // Start in idle state
     }
     
     private void InitializeComponents()
@@ -43,20 +46,20 @@ public class PlayerMovement : MonoBehaviour
         if (!rb) rb = GetComponent<Rigidbody>();
         if (!anim) anim = GetComponent<Animator>();
         
-        // Disable root motion completely
         anim.applyRootMotion = false;
-        
-        // Proper rigidbody setup
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.linearDamping = 2f;
+        
+        isGrounded = true;
+        isJumping = false;
+        transform.position = new Vector3(transform.position.x, Mathf.Max(1f, transform.position.y), transform.position.z);
     }
     
     void Update()
     {
         HandleInput();
-        CheckGroundStatus();
-        CheckFallingState();
+        SimpleGroundCheck();
         HandleAnimations();
     }
     
@@ -71,51 +74,22 @@ public class PlayerMovement : MonoBehaviour
         isRunning = Input.GetKey(KeyCode.W);
         horizontalInput = Input.GetAxisRaw("Horizontal");
         
-        // Jump
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
         {
             Jump();
         }
     }
     
-    private void CheckGroundStatus()
+    private void SimpleGroundCheck()
     {
+        Vector3 rayStart = feet ? feet.position : transform.position;
         bool wasGrounded = isGrounded;
-        isGrounded = Physics.Raycast(feet.position, Vector3.down, groundCheckDistance, groundMask);
+        isGrounded = Physics.Raycast(rayStart, Vector3.down, groundCheckDistance, groundMask);
         
-        // Handle landing from jump
         if (!wasGrounded && isGrounded && isJumping)
         {
-            // Just landed from jump
             isJumping = false;
-            isFalling = false;
-            anim.SetBool(JumpHash, false);
-            
-            // Resume running if player was running before jump and W is still held
-            if (wasRunningBeforeJump && Input.GetKey(KeyCode.W))
-            {
-                isRunning = true;
-            }
-        }
-    }
-    
-    private void CheckFallingState()
-    {
-        // Check if player has fallen below ground level (death zone)
-        if (transform.position.y < -5f && !isFalling)
-        {
-            isFalling = true;
-            if (HasAnimationClip("Falling - Crypto"))
-            {
-                anim.Play("Falling - Crypto", 0, 0f);
-            }
-        }
-        
-        // Trigger respawn at -10f
-        if (transform.position.y < -10f)
-        {
-            // Add your respawn logic here
-            Debug.Log("Player fell too far - respawn needed");
+            if (debugMovement) Debug.Log("LANDED - Jump cleared", this);
         }
     }
     
@@ -128,13 +102,13 @@ public class PlayerMovement : MonoBehaviour
         {
             velocity.z = runSpeed;
         }
-        else if (isGrounded)
+        else if (isGrounded && !isJumping)
         {
             velocity.z = Mathf.Lerp(velocity.z, 0f, 10f * Time.fixedDeltaTime);
         }
         
-        // Side movement - instant response
-        if (isGrounded)
+        // Side movement
+        if (isGrounded || isJumping)
         {
             velocity.x = horizontalInput * sideSpeed;
         }
@@ -145,53 +119,84 @@ public class PlayerMovement : MonoBehaviour
     private void HandleAnimations()
     {
         if (!anim) return;
-        
-        // Priority: Falling > Jumping > Running/Movement > Idle
-        if (isFalling)
+
+        // Handle death/respawn first
+        if (transform.position.y < -5f)
         {
-            // Keep falling animation
+            if (currentAnimState != AnimationState.Falling)
+            {
+                currentAnimState = AnimationState.Falling;
+                anim.Play("Falling - Crypto");
+            }
+            
+            if (transform.position.y < -8f)
+            {
+                transform.position = new Vector3(transform.position.x, 1f, transform.position.z);
+                isGrounded = true;
+                isJumping = false;
+                currentAnimState = AnimationState.Idle; // Reset to idle after respawn
+            }
             return;
         }
-        
+
+        // Handle normal animation states
+        AnimationState targetState = currentAnimState;
+
         if (isJumping)
         {
-            // Keep jump animation playing
-            return;
-        }
-        
-        if (isRunning && isGrounded)
-        {
-            // Running
-            if (!anim.GetCurrentAnimatorStateInfo(0).IsName("Running - Crypto"))
-            {
-                anim.Play("Running - Crypto", 0, 0f);
-            }
+            targetState = AnimationState.Jumping;
         }
         else if (isGrounded)
         {
-            // Handle side step animations
-            if (horizontalInput < -0.1f)
+            if (isRunning)
             {
-                if (!anim.GetCurrentAnimatorStateInfo(0).IsName("Left - Crypto"))
-                {
-                    anim.Play("Left - Crypto", 0, 0f);
-                }
+                targetState = AnimationState.Running;
+            }
+            else if (horizontalInput < -0.1f)
+            {
+                targetState = AnimationState.Left;
             }
             else if (horizontalInput > 0.1f)
             {
-                if (!anim.GetCurrentAnimatorStateInfo(0).IsName("Right - Crypto"))
-                {
-                    anim.Play("Right - Crypto", 0, 0f);
-                }
+                targetState = AnimationState.Right;
             }
             else
             {
-                // Idle
-                if (!anim.GetCurrentAnimatorStateInfo(0).IsName("Idle 2 - Crypto"))
-                {
-                    anim.Play("Idle 2 - Crypto", 0, 0f);
-                }
+                targetState = AnimationState.Idle;
             }
+        }
+        // Maintain current state if in air but not jumping (shouldn't happen normally)
+
+        // Only change animation if state changed
+        if (targetState != currentAnimState)
+        {
+            currentAnimState = targetState;
+            PlayAnimationForState(currentAnimState);
+        }
+    }
+    
+    private void PlayAnimationForState(AnimationState state)
+    {
+        switch (state)
+        {
+            case AnimationState.Idle:
+                anim.Play("Idle 2 - Crypto");
+                break;
+            case AnimationState.Running:
+                anim.Play("Running - Crypto");
+                break;
+            case AnimationState.Left:
+                anim.Play("Left - Crypto");
+                break;
+            case AnimationState.Right:
+                anim.Play("Right - Crypto");
+                break;
+            case AnimationState.Jumping:
+                anim.Play("Jump - Crypto");
+                break;
+            case AnimationState.Falling:
+                anim.Play("Falling - Crypto");
+                break;
         }
     }
     
@@ -211,37 +216,23 @@ public class PlayerMovement : MonoBehaviour
     
     private void Jump()
     {
-        // Remember if player was running before jump
-        wasRunningBeforeJump = isRunning;
-        
         isJumping = true;
-        anim.SetBool(JumpHash, true);
-        anim.Play("Jump - Crypto", 0, 0f);
+        currentAnimState = AnimationState.Jumping;
         
-        // Apply jump physics
         Vector3 jumpVelocity = rb.linearVelocity;
         jumpVelocity.y = jumpForce;
         
-        // Add forward boost if running
         if (isRunning)
         {
             jumpVelocity.z += jumpForwardBoost;
         }
         
         rb.linearVelocity = jumpVelocity;
-    }
-    
-    private bool HasAnimationClip(string clipName)
-    {
-        if (anim && anim.runtimeAnimatorController)
+        
+        if (debugMovement)
         {
-            foreach (AnimationClip clip in anim.runtimeAnimatorController.animationClips)
-            {
-                if (clip.name == clipName)
-                    return true;
-            }
+            Debug.Log($"JUMPED: Running={isRunning}", this);
         }
-        return false;
     }
     
     public float ReturnZAxis() => transform.position.z;
