@@ -1562,7 +1562,6 @@ GameObject:
   - component: {fileID: 826201871}
   - component: {fileID: 826201870}
   - component: {fileID: 826201872}
-  - component: {fileID: 826201873}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1653,29 +1652,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 826201868}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d2a8a32fa2e4b8c4f912a8dd3de8bf28, type: 3}
+  m_Script: {fileID: 11500000, guid: 7d24f73495494e7892bc3b0969920da8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnifiedCameraController
   player: {fileID: 1076822218}
-  offset3D: {x: 0, y: 1.93, z: -4.9}
-  offset2D: {x: 0, y: 16, z: 0}
-  transitionDuration: 1
---- !u!114 &826201873
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 826201868}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 418e32f06f214669ae7416a57cfbf411, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
-  player: {fileID: 1076822218}
-  offset: {x: 0, y: 17.8, z: 0}
   followSpeed: 5
   useSmoothing: 1
+  offset3D: {x: 0, y: 4.62, z: -3.18}
+  offset2D: {x: 0, y: 11.3, z: 6.3}
+  transitionDuration: 1
 --- !u!1 &920161667
 GameObject:
   m_ObjectHideFlags: 0
@@ -2056,16 +2041,16 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 16fbc29d40fccdf4ab0ee30ee08274fc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
-  baseSpeed: 50
-  maxSpeed: 300
-  acceleration: 2
-  forwardForceMultiplier: 0.5
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
+  baseSpeed: 6
+  maxSpeed: 20
+  acceleration: 15
+  forwardForceMultiplier: 22
   constantForwardSpeed: 8
-  sideSpeed: 80
-  jumpForce: 20
-  jumpForwardBoost: 200
-  jumpCooldown: 1
+  sideSpeed: 18
+  jumpForce: 7
+  jumpForwardBoost: 4
+  jumpCooldown: 0.1
   rb: {fileID: 1076822222}
   anim: {fileID: 1076822224}
   feet: {fileID: 1616032160}
@@ -2073,10 +2058,10 @@ MonoBehaviour:
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  groundedRay: 0.1
+  groundedRay: 0.15
   environmentUpdateInterval: 150
   maxRespawns: 3
-  respawnScreen: {fileID: 806949838}
+  respawnScreen: {fileID: 59315890}
   isJumping: 0
 --- !u!114 &1076822221
 MonoBehaviour:
