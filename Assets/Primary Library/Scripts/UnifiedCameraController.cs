@@ -175,7 +175,7 @@ public class UnifiedCameraController : MonoBehaviour
         {
             // In 3D mode, use initial player X position, follow Y and Z
             targetPosition = new Vector3(
-                initialPlayerPosition.x, // Same X as initial player position
+                player.position.x + currentOffset.x,
                 player.position.y + currentOffset.y,
                 player.position.z + currentOffset.z
             );
@@ -252,7 +252,7 @@ public class UnifiedCameraController : MonoBehaviour
         else
         {
             targetPosition = new Vector3(
-                initialPlayerPosition.x,
+                player.position.x + currentTargetOffset.x,
                 player.position.y + currentTargetOffset.y,
                 player.position.z + currentTargetOffset.z
             );

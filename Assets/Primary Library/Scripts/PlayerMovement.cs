@@ -4,99 +4,122 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    [SerializeField] private float runSpeed = 8f;
+    [Header("Movement Settings")] [SerializeField]
+    private float runSpeed = 8f;
+
     [SerializeField] private float sideSpeed = 12f;
     [SerializeField] private float jumpForce = 7f;
     [SerializeField] private float jumpForwardBoost = 4f;
-    
-    [Header("Visual Settings")]
-    [SerializeField] private float leanAngle = 15f;
+
+    [Header("Visual Settings")] [SerializeField]
+    private float leanAngle = 15f;
+
     [SerializeField] private float leanSpeed = 8f;
-    
-    [Header("Object References")]
-    [SerializeField] private Transform playerModel;
+
+    [Header("Object References")] [SerializeField]
+    private Transform playerModel;
+
     [SerializeField] private Rigidbody rb;
     [SerializeField] private Animator anim;
     [SerializeField] private Transform feet;
     [SerializeField] private LayerMask groundMask = ~0;
     [SerializeField] private float groundCheckDistance = 0.3f;
-    
-    [Header("Debug")]
-    [SerializeField] private bool debugMovement = false;
-    
+
+    [Header("Debug")] [SerializeField] private bool debugMovement = false;
+    private Vector3 lastSafePosition;
+
     // Animation states
-    private enum AnimationState { Idle, Running, Left, Right, Jumping, Falling }
+    private enum AnimationState
+    {
+        Idle,
+        Running,
+        Left,
+        Right,
+        Jumping,
+        Falling
+    }
+
     private AnimationState currentAnimState;
-    
+
     // Movement state
     private bool isGrounded = true;
     private bool isRunning;
     private bool isJumping;
     private float horizontalInput;
-    
+
     void Start()
     {
         InitializeComponents();
         currentAnimState = AnimationState.Idle; // Start in idle state
     }
-    
+
     private void InitializeComponents()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
         if (!anim) anim = GetComponent<Animator>();
-        
+
         anim.applyRootMotion = false;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.linearDamping = 2f;
-        
+
         isGrounded = true;
         isJumping = false;
-        transform.position = new Vector3(transform.position.x, Mathf.Max(1f, transform.position.y), transform.position.z);
+        transform.position =
+            new Vector3(transform.position.x, Mathf.Max(1f, transform.position.y), transform.position.z);
+
+        // Initialize safe position
+        lastSafePosition = transform.position;
+        lastSafePosition.x = 1.075f; // Set initial X to center
     }
-    
+
     void Update()
     {
         HandleInput();
         SimpleGroundCheck();
         HandleAnimations();
     }
-    
+
     void FixedUpdate()
     {
         HandleMovement();
         HandleVisualLean();
     }
-    
+
     private void HandleInput()
     {
         isRunning = Input.GetKey(KeyCode.W);
         horizontalInput = Input.GetAxisRaw("Horizontal");
-        
+
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
         {
             Jump();
         }
     }
-    
+
     private void SimpleGroundCheck()
     {
         Vector3 rayStart = feet ? feet.position : transform.position;
         bool wasGrounded = isGrounded;
         isGrounded = Physics.Raycast(rayStart, Vector3.down, groundCheckDistance, groundMask);
-        
+
         if (!wasGrounded && isGrounded && isJumping)
         {
             isJumping = false;
             if (debugMovement) Debug.Log("LANDED - Jump cleared", this);
         }
+
+        if (isGrounded && transform.position.y >= 0f)
+        {
+            lastSafePosition = transform.position;
+            lastSafePosition.x = 1.075f; // Center X position
+        }
     }
-    
+
     private void HandleMovement()
     {
         Vector3 velocity = rb.linearVelocity;
-        
+
         // Forward movement
         if (isRunning && isGrounded)
         {
@@ -106,16 +129,16 @@ public class PlayerMovement : MonoBehaviour
         {
             velocity.z = Mathf.Lerp(velocity.z, 0f, 10f * Time.fixedDeltaTime);
         }
-        
+
         // Side movement
         if (isGrounded || isJumping)
         {
             velocity.x = horizontalInput * sideSpeed;
         }
-        
+
         rb.linearVelocity = velocity;
     }
-    
+
     private void HandleAnimations()
     {
         if (!anim) return;
@@ -128,16 +151,23 @@ public class PlayerMovement : MonoBehaviour
                 currentAnimState = AnimationState.Falling;
                 anim.Play("Falling - Crypto");
             }
-            
+
             if (transform.position.y < -8f)
             {
-                transform.position = new Vector3(transform.position.x, 1f, transform.position.z);
+                // Teleport to last safe position with centered X
+                transform.position = lastSafePosition;
+                rb.linearVelocity = Vector3.zero; // Reset velocity
                 isGrounded = true;
                 isJumping = false;
-                currentAnimState = AnimationState.Idle; // Reset to idle after respawn
+            
+                // IMMEDIATELY SET IDLE STATE AND ANIMATION
+                currentAnimState = AnimationState.Idle;
+                anim.Play("Idle 2 - Crypto", 0, 0f); // Force restart idle animation
+                return; // Skip further animation processing this frame
             }
             return;
         }
+
 
         // Handle normal animation states
         AnimationState targetState = currentAnimState;
@@ -174,7 +204,7 @@ public class PlayerMovement : MonoBehaviour
             PlayAnimationForState(currentAnimState);
         }
     }
-    
+
     private void PlayAnimationForState(AnimationState state)
     {
         switch (state)
@@ -199,41 +229,42 @@ public class PlayerMovement : MonoBehaviour
                 break;
         }
     }
-    
+
     private void HandleVisualLean()
     {
         if (playerModel == null) return;
-        
+
         float targetLean = 0f;
         if (isRunning && isGrounded && Mathf.Abs(horizontalInput) > 0.1f)
         {
             targetLean = -horizontalInput * leanAngle;
         }
-        
+
         Quaternion targetRotation = Quaternion.Euler(0, 0, targetLean);
-        playerModel.localRotation = Quaternion.Slerp(playerModel.localRotation, targetRotation, leanSpeed * Time.fixedDeltaTime);
+        playerModel.localRotation =
+            Quaternion.Slerp(playerModel.localRotation, targetRotation, leanSpeed * Time.fixedDeltaTime);
     }
-    
+
     private void Jump()
     {
         isJumping = true;
         currentAnimState = AnimationState.Jumping;
-        
+
         Vector3 jumpVelocity = rb.linearVelocity;
         jumpVelocity.y = jumpForce;
-        
+
         if (isRunning)
         {
             jumpVelocity.z += jumpForwardBoost;
         }
-        
+
         rb.linearVelocity = jumpVelocity;
-        
+
         if (debugMovement)
         {
             Debug.Log($"JUMPED: Running={isRunning}", this);
         }
     }
-    
+
     public float ReturnZAxis() => transform.position.z;
 }
