@@ -164,13 +164,26 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
 
             GameObject prefab = prefabs[Random.Range(0, prefabs.Count)];
             GameObject inst   = Instantiate(prefab, hit.point, prefab.transform.rotation, transform);
-            // Nudge vertically so it sits exactly on the floor (without scaling!)
-            if (inst.TryGetComponent(out Collider c))
-                inst.transform.position += new Vector3(0f, c.bounds.extents.y + yOffset, 0f);
-
-            SnapToGround(inst.transform);
-
             
+            
+            // Check if this object should float (like UFOs)
+            bool shouldFloat = IsFloatingObject(inst);
+            
+            if (shouldFloat)
+            {
+                // For floating objects like UFOs, position them above ground with their intended offset
+                if (inst.TryGetComponent(out Collider c))
+                {
+                    float floatHeight = GetFloatingHeight(inst);
+                    inst.transform.position = hit.point + new Vector3(0f, floatHeight, 0f);
+                }
+            }
+            else
+            {
+                // For ground objects, ensure they sit properly on the ground
+                SnapToGround(inst.transform);
+            }
+
             // Attach helper so it self‑despawns when the player passes.
             if (!inst.TryGetComponent(out DespawnAfterPlayer _))
             {
@@ -225,23 +238,56 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
     
     void SnapToGround(Transform t)
     {
-        // Cast straight down so we know the exact terrain height
-        if (Physics.Raycast(t.position + Vector3.up * 10f, Vector3.down,
+        // Shoot a ray straight down to find the terrain height
+        if (Physics.Raycast(t.position + Vector3.up * 10f,
+                Vector3.down,
                 out RaycastHit hit, 50f, groundMask))
         {
-            // If a mesh pivot is mid-trunk, offset so the bottom touches the hit point
-            if (t.TryGetComponent(out Renderer r))
+            float bottomOffset = 0f;
+
+            // Prefer a collider (trunk) over renderer (includes leaves) if it exists
+            if (t.TryGetComponent(out Collider col))
             {
-                float pivotToBottom = r.bounds.min.y - t.position.y;
-                t.position = hit.point - Vector3.up * pivotToBottom;
+                bottomOffset = t.position.y - col.bounds.min.y;
             }
-            else
+            else if (t.TryGetComponent(out Renderer rend))
             {
-                t.position = hit.point;
+                bottomOffset = t.position.y - rend.bounds.min.y;
             }
+
+            // Re-position so the lowest point touches the hit position
+            t.position = hit.point + Vector3.up * bottomOffset;
         }
     }
     
+    bool IsFloatingObject(GameObject obj)
+    {
+        // Check if this is a UFO or other floating object by name
+        string objName = obj.name.ToLower();
+        if (objName.Contains("ufo"))
+        {
+            return true;
+        }
+        
+        // Add other floating object patterns here as needed
+        // For example: if (objName.Contains("balloon") || objName.Contains("drone"))
+        
+        return false;
+    }
+
+    float GetFloatingHeight(GameObject obj)
+    {
+        string objName = obj.name.ToLower();
+        
+        // UFOs should float higher
+        if (objName.Contains("ufo"))
+        {
+            return 3.5f + Random.Range(-0.5f, 0.5f); // 3-4 units above ground with some variation
+        }
+        
+        // Default floating height for other floating objects
+        return 2f;
+    }
 }
 
 /*─────────────────────────────────────────────────────────────────────────*/
