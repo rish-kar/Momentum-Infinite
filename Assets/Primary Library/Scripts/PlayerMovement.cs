@@ -28,6 +28,13 @@ public class PlayerMovement : MonoBehaviour
     [Header("Debug")] [SerializeField] private bool debugMovement = false;
     private Vector3 lastSafePosition;
 
+    [Header("Respawn Settings")] [SerializeField]
+    private Animator respawnAnimator; // Assign the Canvas animator in inspector
+
+    [SerializeField] private float respawnAnimationLength = 3f; // Length of your respawn animation
+    private bool isRespawning = false;
+    private float respawnTimer = 0f;
+
     // Animation states
     private enum AnimationState
     {
@@ -63,14 +70,19 @@ public class PlayerMovement : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.linearDamping = 2f;
 
-        isGrounded = true;
-        isJumping = false;
-        transform.position =
-            new Vector3(transform.position.x, Mathf.Max(1f, transform.position.y), transform.position.z);
-
-        // Initialize safe position
+        // Initialize safe position FIRST
         lastSafePosition = transform.position;
         lastSafePosition.x = 1.075f; // Set initial X to center
+
+        // Set position using lastSafePosition
+        transform.position = new Vector3(
+            lastSafePosition.x,
+            Mathf.Max(1f, lastSafePosition.y),
+            lastSafePosition.z
+        );
+
+        isGrounded = true;
+        isJumping = false;
     }
 
     void Update()
@@ -143,6 +155,13 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!anim) return;
 
+        // Handle respawning sequence
+        if (isRespawning)
+        {
+            // Player is already teleported and ready - just waiting for animation to finish
+            return;
+        }
+
         // Handle death/respawn first
         if (transform.position.y < -5f)
         {
@@ -152,19 +171,32 @@ public class PlayerMovement : MonoBehaviour
                 anim.Play("Falling - Crypto");
             }
 
-            if (transform.position.y < -8f)
+            if (transform.position.y < -8f && !isRespawning)
             {
-                // Teleport to last safe position with centered X
+                // Immediately teleport player to safe position
                 transform.position = lastSafePosition;
                 rb.linearVelocity = Vector3.zero; // Reset velocity
                 isGrounded = true;
                 isJumping = false;
-            
-                // IMMEDIATELY SET IDLE STATE AND ANIMATION
+
+                // Set to idle state and animation
                 currentAnimState = AnimationState.Idle;
-                anim.Play("Idle 2 - Crypto", 0, 0f); // Force restart idle animation
-                return; // Skip further animation processing this frame
+                anim.Play("Idle 2 - Crypto", 0, 0f);
+
+                // Start respawning sequence
+                isRespawning = true;
+
+                // Trigger respawning animation
+                if (respawnAnimator != null)
+                {
+                    respawnAnimator.Play("Respawning", 0, 0f);
+                }
+
+                // Start timer to reset respawn state
+                StartCoroutine(EndRespawn(respawnAnimationLength));
+                return;
             }
+
             return;
         }
 
@@ -203,6 +235,12 @@ public class PlayerMovement : MonoBehaviour
             currentAnimState = targetState;
             PlayAnimationForState(currentAnimState);
         }
+    }
+
+    private IEnumerator EndRespawn(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        isRespawning = false;
     }
 
     private void PlayAnimationForState(AnimationState state)
