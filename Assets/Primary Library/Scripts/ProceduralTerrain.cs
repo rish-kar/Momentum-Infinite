@@ -60,7 +60,12 @@ public class ProceduralTerrain : MonoBehaviour
     private Vector3 _positionOfGround;
     private float lastPlayerZ; // Track player's last position for speed calculation
     private EnvironmentObjectSpawnManager objectSpawnManager; // Cache the spawn manager
+    
+    private const float NAVMESH_LOOKAHEAD = 600f; // 300m ahead + 300m buffer
 
+    private readonly List<NavMeshDataInstance> liveMeshes = new();
+
+    
     private void Awake()
     {
         // Null checks and Initialize Reference Block
@@ -227,23 +232,27 @@ public class ProceduralTerrain : MonoBehaviour
         }
 
         // IMPORTANT: update ghost agent's target to the newly spawned terrain
-        if (ghostRunnerAgent != null)
-        {
-            ghostRunnerAgent.SetTarget(_newGround.transform);
-        }
+        // if (ghostRunnerAgent != null)
+        // {
+        //     ghostRunnerAgent.SetTarget(_newGround.transform);
+        
 
-        tilesSinceLastBake++;
-        if (tilesSinceLastBake >= bakeInterval)
-        {
-            tilesSinceLastBake = 0;
-            StartCoroutine(RebuildNavmeshAsync()); // this calls the coroutine below
-        }
+        StartCoroutine(RebuildNavmeshAsync());
 
         AdjustSpawnRate();
         
         if (debugTerrain)
         {
             Debug.Log($"Spawned new ground: {_newGround.name} at position {_newGround.transform.position}", this);
+        }
+        
+        // Modify StartSpawning method (add at end)
+        tilesSinceLastBake++;
+        if (tilesSinceLastBake >= bakeInterval || 
+            transform.position.z - lastPlayerZ > groundTileLength * 2)
+        {
+            tilesSinceLastBake = 0;
+            StartCoroutine(RebuildNavmeshAsync());
         }
     }
 
@@ -282,46 +291,64 @@ public class ProceduralTerrain : MonoBehaviour
         if (navMeshSurface == null)
         {
             GameObject navMeshObj = GameObject.FindGameObjectWithTag("Navigational Mesh");
-            if (navMeshObj != null)
-            {
-                navMeshSurface = navMeshObj.GetComponent<NavMeshSurface>();
-            }
+            if (navMeshObj != null) navMeshSurface = navMeshObj.GetComponent<NavMeshSurface>();
         }
+        if (navMeshSurface == null || _player == null) return;
 
-        // Calculate midpoint of spawned terrains based on player's forward position
-        float navMeshLength = 1500f; // large enough to cover several spawned grounds ahead and behind
-        float forwardOffset = navMeshLength / 2f - 100f; // offset forward so it's ahead of the player
-
-        Vector3 navMeshPosition = new Vector3(
-            0,
-            0,
-            _player.transform.position.z + forwardOffset
+        // Center NavMesh 300m ahead of player
+        Vector3 playerPos = _player.transform.position;
+        Vector3 navMeshCenter = new Vector3(
+            0f,
+            0f,
+            playerPos.z + NAVMESH_LOOKAHEAD/2
         );
 
-        navMeshSurface.transform.position = navMeshPosition;
-        navMeshSurface.size = new Vector3(600, 20, navMeshLength); // significantly increased size
-
-        // navMeshSurface.BuildNavMesh();
+        navMeshSurface.transform.position = navMeshCenter;
+        navMeshSurface.size = new Vector3(600f, 20f, NAVMESH_LOOKAHEAD);
+    
+        // Rebuild immediately when player moves significantly
+        if (Mathf.Abs(playerPos.z - lastPlayerZ) > 50f)
+        {
+            StartCoroutine(RebuildNavmeshAsync());
+        }
     }
+
 
     IEnumerator RebuildNavmeshAsync()
     {
-        if (bakeJob != null && !bakeJob.isDone) yield break; // still baking
+        // avoid overlap: if a bake is running, wait for it
+        while (bakeJob != null && !bakeJob.isDone) yield return null;
 
+        // ► collect every collider/renderer under the surface volume ―
         var sources = new List<NavMeshBuildSource>();
         NavMeshBuilder.CollectSources(
-            navMeshSurface.transform, navMeshSurface.layerMask,
-            navMeshSurface.useGeometry, navMeshSurface.defaultArea,
-            new List<NavMeshBuildMarkup>(), sources);
+            navMeshSurface.transform,     // root
+            navMeshSurface.layerMask,
+            navMeshSurface.useGeometry,
+            navMeshSurface.defaultArea,
+            new List<NavMeshBuildMarkup>(),
+            sources);
 
-        var bounds = new Bounds(navMeshSurface.transform.position, navMeshSurface.size);
+        var bounds = new Bounds(
+            navMeshSurface.transform.position,
+            navMeshSurface.size);
 
         bakeJob = NavMeshBuilder.UpdateNavMeshDataAsync(
             bakedNavMesh,
             navMeshSurface.GetBuildSettings(),
             sources,
-            bounds); // name arg → picks Bounds overload
+            bounds);
 
-        while (!bakeJob.isDone) yield return null; // main thread stays free
+        yield return bakeJob;             // wait until finished
+    }
+    
+    public float LatestGroundZ
+    {
+        get
+        {
+            return _previousGround     != null
+                ? _previousGround.transform.position.z
+                : 0f;
+        }
     }
 }

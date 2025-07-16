@@ -34,6 +34,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float respawnAnimationLength = 3f; // Length of your respawn animation
     private bool isRespawning = false;
     private float respawnTimer = 0f;
+    
+    public float CurrentSpeed => isRunning ? runSpeed : 0;
+
 
     // Animation states
     private enum AnimationState
