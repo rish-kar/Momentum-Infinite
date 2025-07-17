@@ -1100,7 +1100,7 @@ GameObject:
   m_Component:
   - component: {fileID: 631977131}
   - component: {fileID: 631977132}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Environment Object Spawn Manager
   m_TagString: Environment Objects
   m_Icon: {fileID: 0}
@@ -1134,7 +1134,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f95fc7abff3946d8a5bf040babb7442d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentObjectSpawnManager
-  spawnPercentage: 17.7
+  spawnPercentage: 1.2
   xRange: {x: -7.1, y: 10.55}
   clearHalfWidth: 2
   zJitter: 5
@@ -2593,6 +2593,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b146830ee05c660449fe32c8c55a42b5,
+        type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: b146830ee05c660449fe32c8c55a42b5,
         type: 3}
       propertyPath: m_Name
@@ -2652,7 +2657,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1574626339}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: GroundContainer
   m_TagString: Ground Container
   m_Icon: {fileID: 0}
@@ -3325,6 +3330,16 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2007580605}
     m_Modifications:
+    - target: {fileID: 767473131144514425, guid: 191797d706278ae469ba6a35a1eff254,
+        type: 3}
+      propertyPath: obstacleMask.m_Bits
+      value: 256
+      objectReference: {fileID: 0}
+    - target: {fileID: 886921677212961710, guid: 191797d706278ae469ba6a35a1eff254,
+        type: 3}
+      propertyPath: m_IgnoreLayers.m_Bits
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2085608318702435924, guid: 191797d706278ae469ba6a35a1eff254,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -3382,8 +3397,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4903695827037686871, guid: 191797d706278ae469ba6a35a1eff254,
         type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4903695827037686871, guid: 191797d706278ae469ba6a35a1eff254,
+        type: 3}
       propertyPath: m_TagString
       value: Agent
+      objectReference: {fileID: 0}
+    - target: {fileID: 7809256571565350891, guid: 191797d706278ae469ba6a35a1eff254,
+        type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 7809256571565350891, guid: 191797d706278ae469ba6a35a1eff254,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3538,7 +3568,7 @@ GameObject:
   - component: {fileID: 2684501641451910176}
   - component: {fileID: 2684501641451910177}
   - component: {fileID: 6470019967362229240}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Ground Terrain
   m_TagString: Initial Ground
   m_Icon: {fileID: 0}
