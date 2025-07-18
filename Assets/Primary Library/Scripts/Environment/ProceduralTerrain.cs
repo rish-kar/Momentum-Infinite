@@ -18,7 +18,7 @@ public class ProceduralTerrain : MonoBehaviour
     [SerializeField] private float spawnDistanceAhead = 500f; // Always keep 500 units ahead
     [SerializeField] private float minSpawnRate = 0.1f; // Minimum time between spawns (fast player)
     [SerializeField] private float maxSpawnRate = 1f; // Maximum time between spawns (slow player)
-    [SerializeField] private float groundTileLength = 96f; // Length of each ground tile
+    [SerializeField] public float groundTileLength = 96f; // Length of each ground tile
 
     [Header("Agents and Player")] [SerializeField]
     private GhostRunnerAgent ghostRunnerAgent;
@@ -64,6 +64,7 @@ public class ProceduralTerrain : MonoBehaviour
     private const float NAVMESH_LOOKAHEAD = 600f; // 300m ahead + 300m buffer
 
     private readonly List<NavMeshDataInstance> liveMeshes = new();
+
 
     
     private void Awake()
@@ -155,6 +156,7 @@ public class ProceduralTerrain : MonoBehaviour
             UpdateNavMeshSurface();
             nextNavMeshUpdate = Time.time + navMeshUpdateInterval;
         }
+        
     }
 
 
@@ -342,13 +344,16 @@ public class ProceduralTerrain : MonoBehaviour
         yield return bakeJob;             // wait until finished
     }
     
-    public float LatestGroundZ
-    {
-        get
-        {
-            return _previousGround     != null
-                ? _previousGround.transform.position.z
-                : 0f;
-        }
-    }
+    // public float LatestGroundZ
+    // {
+    //     get
+    //     {
+    //         return _previousGround     != null
+    //             ? _previousGround.transform.position.z
+    //             : 0f;
+    //     }
+    // }
+    
+    public float LatestGroundZ => _previousGround ? _previousGround.transform.position.z : 0f;
+
 }
