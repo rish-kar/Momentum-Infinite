@@ -5,9 +5,9 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Settings")] [SerializeField]
-    private float runSpeed = 8f;
+    public float runSpeed = 8f;
 
-    [SerializeField] private float sideSpeed = 12f;
+    [SerializeField] public float sideSpeed = 12f;
     [SerializeField] private float jumpForce = 7f;
     [SerializeField] private float jumpForwardBoost = 4f;
 
@@ -38,6 +38,12 @@ public class PlayerMovement : MonoBehaviour
     public float CurrentSpeed => isRunning ? runSpeed : 0;
 
 
+    public float RunSpeed
+    {
+        get => runSpeed;
+        set => runSpeed = value;
+    }
+    
     // Animation states
     private enum AnimationState
     {
