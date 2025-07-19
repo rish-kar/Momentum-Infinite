@@ -44,6 +44,12 @@ public class PlayerMovement : MonoBehaviour
         set => runSpeed = value;
     }
     
+    public float SideSpeed
+    {
+        get => sideSpeed;
+        set => sideSpeed = value;
+    }
+    
     // Animation states
     private enum AnimationState
     {
