@@ -1135,7 +1135,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f95fc7abff3946d8a5bf040babb7442d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentObjectSpawnManager
-  spawnPercentage: 100
+  spawnPercentage: 0
   xRange: {x: -7.1, y: 10.55}
   clearHalfWidth: 2
   zJitter: 5
@@ -2522,7 +2522,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkyboxChanger
   player: {fileID: 1076822218}
   videoPlayer: {fileID: 1219907407}
-  distanceInterval: 2000
+  distanceInterval: 1000
   transitionDuration: 2.5
   skyboxes:
   - {fileID: 2100000, guid: ea50f78baf29a8f4fab9c2aad21c350a, type: 2}

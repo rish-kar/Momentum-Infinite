@@ -1,125 +1,175 @@
 using UnityEngine;
-using UnityEngine.Video;                 // <- gives VideoPlayer & VideoClip
+using UnityEngine.Video;
 using System.Collections;
 using System.Collections.Generic;
 
 public class SkyboxChanger : MonoBehaviour
 {
     /* ── Inspector ───────────────────────────────────────────── */
-    [Header("References")]
-    public Transform    player;          // your runner / camera
-    [SerializeField]    VideoPlayer      videoPlayer;   // background VP
+    [Header("References")] public Transform player;
+    [SerializeField] VideoPlayer videoPlayer;
 
-    [Header("Distances")]
-    public int   distanceInterval   = 2000;
-    public float transitionDuration = 2.5f;
+    [Header("Distances")] public int distanceInterval = 2000;
+    public float transitionDuration = 13.0f;
 
-    [Header("Assets (drag-in lists, same order!)")]
-    [SerializeField] private List<Material>  skyboxes   = new(); // 6 mats
-    [SerializeField] private List<VideoClip> videoClips = new(); // 6 clips
-    public int CurrentSkyboxIdx { get; private set; }   // ← NEW
+    [Header("Assets")] 
+    [SerializeField] List<Material> skyboxes = new();
+    [SerializeField] List<VideoClip> videoClips = new();
+    public int CurrentSkyboxIdx { get; private set; }
 
+    /* ── Private State ───────────────────────────────────────── */
+    readonly Stack<int> used = new();
+    private int nextSwapZ;
+    private bool isTransitioning;
+    private Material currentSkyboxInstance;
+    private Material nextSkyboxInstance;
+    private Coroutine transitionRoutine;
+    private float defaultExposure = 1.0f;
 
-    /* ── private state ───────────────────────────────────────── */
-    readonly Stack<int> used = new();    // store index so skybox = clip
-    int       nextSwapZ;
-    Coroutine fadeRoutine;
-
-    /* ────────────────────────────────────────────────────────── */
     void Awake()
     {
-        // quick sanity: same count?
         if (skyboxes.Count != videoClips.Count || skyboxes.Count == 0)
         {
-            // Debug.LogError("Skyboxes & VideoClips lists must both contain the same non-zero number of elements!");
             enabled = false;
             return;
         }
 
-        // pick initial pair
         int i0 = Random.Range(0, skyboxes.Count);
-        RenderSettings.skybox = skyboxes[i0];
-        videoPlayer.clip      = videoClips[i0];
+        InitializeEnvironment(i0);
+        used.Push(i0);
+        nextSwapZ = distanceInterval;
+    }
+
+    void InitializeEnvironment(int index)
+    {
+        // Create new material instance (critical fix)
+        currentSkyboxInstance = new Material(skyboxes[index]);
+        RenderSettings.skybox = currentSkyboxInstance;
+        
+        // Store default exposure
+        if (currentSkyboxInstance.HasProperty("_Exposure"))
+        {
+            defaultExposure = currentSkyboxInstance.GetFloat("_Exposure");
+        }
+        
+        videoPlayer.clip = videoClips[index];
         videoPlayer.Play();
         DynamicGI.UpdateEnvironment();
-        used.Push(i0);
-
-        CurrentSkyboxIdx = i0;
-        nextSwapZ = distanceInterval;
+        CurrentSkyboxIdx = index;
     }
 
     void Update()
     {
-        if (!player) return;
+        if (!player || isTransitioning) return;
 
         if (player.position.z >= nextSwapZ)
         {
             nextSwapZ += distanceInterval;
-            int ix = PickNextIndex();
-            CurrentSkyboxIdx = ix; // ← update current index
-
-            // prepare clip first, then fade skybox when ready
-            StartCoroutine(VideoPreloader.SwapWhenReady(
-                videoPlayer,
-                videoClips[ix],
-                () =>
-                {
-                    if (fadeRoutine != null) StopCoroutine(fadeRoutine);
-                    fadeRoutine = StartCoroutine(FadeSkybox(skyboxes[ix]));
-                }));
+            int nextIndex = PickNextIndex();
+            
+            if (transitionRoutine != null) 
+                StopCoroutine(transitionRoutine);
+                
+            transitionRoutine = StartCoroutine(TransitionRoutine(nextIndex));
         }
     }
 
-    /* ---------- helpers ---------- */
     int PickNextIndex()
     {
         if (used.Count == skyboxes.Count) used.Clear();
 
         List<int> pool = new();
         for (int i = 0; i < skyboxes.Count; i++)
-            if (!used.Contains(i)) pool.Add(i);
+            if (!used.Contains(i))
+                pool.Add(i);
 
         int choice = pool[Random.Range(0, pool.Count)];
         used.Push(choice);
         return choice;
     }
 
-    IEnumerator FadeSkybox(Material next)
+    IEnumerator TransitionRoutine(int nextIndex)
     {
-        Material current = RenderSettings.skybox;
-        bool canFade = current && next &&
-                       current.HasProperty("_Exposure") &&
-                       next.HasProperty("_Exposure");
-
-        if (!canFade)
+        isTransitioning = true;
+        
+        // Create next material instance in advance
+        nextSkyboxInstance = new Material(skyboxes[nextIndex]);
+        float nextExposure = defaultExposure;
+        if (nextSkyboxInstance.HasProperty("_Exposure"))
         {
-            RenderSettings.skybox = next;
+            nextExposure = nextSkyboxInstance.GetFloat("_Exposure");
+        }
+        
+        // Phase 1: Fade out current environment
+        float fadeOutTime = transitionDuration * 0.5f;
+        float timer = 0f;
+        
+        while (timer < fadeOutTime)
+        {
+            timer += Time.deltaTime;
+            float t = Mathf.Clamp01(timer / fadeOutTime);
+            
+            // Fade skybox exposure
+            if (currentSkyboxInstance.HasProperty("_Exposure"))
+            {
+                currentSkyboxInstance.SetFloat("_Exposure", Mathf.Lerp(defaultExposure, 0f, t));
+            }
+            
             DynamicGI.UpdateEnvironment();
-            yield break;
-        }
-
-        float half = transitionDuration * 0.5f;
-        float curExp = current.GetFloat("_Exposure");
-        float nextExp = next.GetFloat("_Exposure");
-
-        // fade out
-        for (float t = 0; t < half; t += Time.deltaTime)
-        {
-            current.SetFloat("_Exposure", curExp * (1f - t / half));
             yield return null;
         }
-        current.SetFloat("_Exposure", 0f);
-
-        // swap & fade in
-        RenderSettings.skybox = next;
+        
+        // Ensure fully black
+        if (currentSkyboxInstance.HasProperty("_Exposure")) 
+            currentSkyboxInstance.SetFloat("_Exposure", 0f);
+        
+        // Phase 2: Swap environment
+        RenderSettings.skybox = nextSkyboxInstance;
+        currentSkyboxInstance = nextSkyboxInstance;
+        videoPlayer.clip = videoClips[nextIndex];
+        videoPlayer.Play();
+        used.Push(nextIndex);
+        CurrentSkyboxIdx = nextIndex;
         DynamicGI.UpdateEnvironment();
-        next.SetFloat("_Exposure", 0f);
-
-        for (float t = 0; t < half; t += Time.deltaTime)
+        
+        // Set initial black state
+        if (currentSkyboxInstance.HasProperty("_Exposure"))
+            currentSkyboxInstance.SetFloat("_Exposure", 0f);
+        
+        // Phase 3: Fade in new environment
+        float fadeInTime = transitionDuration * 0.5f;
+        timer = 0f;
+        
+        while (timer < fadeInTime)
         {
-            next.SetFloat("_Exposure", Mathf.Lerp(0f, nextExp, t / half));
+            timer += Time.deltaTime;
+            float t = Mathf.Clamp01(timer / fadeInTime);
+            
+            // Fade skybox exposure
+            if (currentSkyboxInstance.HasProperty("_Exposure"))
+            {
+                currentSkyboxInstance.SetFloat("_Exposure", Mathf.Lerp(0f, nextExposure, t));
+            }
+            
+            DynamicGI.UpdateEnvironment();
             yield return null;
         }
-        next.SetFloat("_Exposure", nextExp);
+        
+        // Ensure fully visible
+        if (currentSkyboxInstance.HasProperty("_Exposure")) 
+            currentSkyboxInstance.SetFloat("_Exposure", nextExposure);
+        
+        DynamicGI.UpdateEnvironment();
+        isTransitioning = false;
+    }
+
+    void OnDestroy()
+    {
+        // Clean up material instances
+        if (currentSkyboxInstance != null) 
+            Destroy(currentSkyboxInstance);
+            
+        if (nextSkyboxInstance != null) 
+            Destroy(nextSkyboxInstance);
     }
 }

@@ -2,167 +2,181 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Scans the ground corridor ahead of the player and reports any set of colliders that
-/// block the minimum required clearance width (lane).
+/// Scans the ground corridor ahead of the player and reports *every prefab* whose
+/// colliders intrude into the tile‑long safety lane the runner must traverse.
 /// 
-/// A full 10‑metre ground tile is swept with evenly‑spaced horizontal probe rows.
-/// For every probe row we cast a rapid series of short downward rays. If *any* ray
-/// finds ground clearance ≥ <see cref="minClearanceWidth"/>, that row is considered
-/// passable; otherwise the colliders hit in that row are collected as potential
-/// culprits.  All failing rows inside the tile are merged and sent to
-/// <see cref="BlockageReporter"/> in a single report so that **every** prefab that
-/// contributes to the blockage is listed.
+/// How it works in three passes:
+/// 1. **Horizontal probe rows** ‑ identical to the previous algorithm – decide whether
+///    the tile is *truly impassable* (no 1.5 m gap anywhere). Rows that fail add their
+///    hit colliders to a working set.
+/// 2. **Overlap sweep** – a Physics.OverlapBox grabs *all* colliders that fall inside
+///    the tile volume. Anything that belongs to the obstacle layer and crosses the
+///    lane is appended to the working set.  This catches objects that didn’t sit exactly
+///    under a downward ray or that appeared in a "clear" row but still help block the
+///    corridor when combined with others.
+/// 3. The merged, de‑duplicated list is forwarded to <see cref="BlockageReporter"/>.
+///    Names are always root‑prefab/child and have their “(Clone)” suffix removed for
+///    readability.
 /// </summary>
 [AddComponentMenu("Momentum/Procedural Safety/Flyer Corridor Raycast Scanner")]
-public class FlyerCorridorRaycastScanner : MonoBehaviour
+public class FlyerCorridorScanner : MonoBehaviour
 {
-    #region Inspector
+    #region Inspector Fields ----------------------------------------------------
 
     [Header("Ground Settings")]
-    [SerializeField] private float tileLength = 10f;       // Length of a ground tile (Z)
-    [SerializeField] private float tileWidth  = 2.15f;      // Total road width (X)
-    [SerializeField] private LayerMask obstacleMask;        // Layers considered obstacles
+    [SerializeField] private float tileLength = 10f;          // Z‑size of each ground tile
+    [SerializeField] private float tileWidth  = 2.15f;        // total road width we scan
+    [SerializeField] private LayerMask obstacleMask;
 
     [Header("Player Clearance Requirements")]
-    [Tooltip("Minimum free horizontal space the player needs to pass (metres)")]
-    [SerializeField] private float minClearanceWidth = 1.5f;
-    [Tooltip("How far below the player to originate the clearance rays")]
-    [SerializeField] private float rayHeightOffset = 1f;
-    [Tooltip("Distance between parallel probe rows (metres)")]
-    [SerializeField] protected float raycastSpacing = 0.5f;
+    [SerializeField] private float minClearanceWidth = 1.5f;  // needed gap across X
+    [SerializeField] private float rayHeightOffset   = 1f;    // cast rays from this Y
+    [SerializeField] private float raycastSpacing    = 0.5f;  // spacing of probe rows
 
-    #endregion
+    [Header("Overlap Sweep")]
+    [Tooltip("Extra margin (in metres) above ground when doing the OverlapBox sweep")]
+    [SerializeField] private float sweepHeight = 4f;
+
+    #endregion ----------------------------------------------------------------
 
     private float _lastScannedTileZ = float.MinValue;
 
-    /***********************************************************************/
-    //                              Unity                                   
-    /***********************************************************************/
-
+    // -------------------------------------------------------------------------
+    // FixedUpdate
+    // -------------------------------------------------------------------------
     private void FixedUpdate()
     {
-        // Work in tile increments: do not scan the same tile twice.
         float tileZ = Mathf.Floor(transform.position.z / tileLength) * tileLength;
-        if (tileZ <= _lastScannedTileZ) return;
-        _lastScannedTileZ = tileZ;
+        if (tileZ <= _lastScannedTileZ) return;    // already processed this tile
 
+        _lastScannedTileZ = tileZ;
         ScanCorridor(tileZ);
     }
 
-    /***********************************************************************/
-    //                           Core logic                                 
-    /***********************************************************************/
-
-    /// <summary>
-    /// Casts rapid downward rays across the width of the road at the given Z‑slice
-    /// and determines whether the required lane width is clear.
-    /// </summary>
-    private bool CheckHorizontalClearance(float currentZ, float raycastY,
-                                          out List<BlockageDetailDTO.CulpritInfo> culpritsList)
+    // -------------------------------------------------------------------------
+    // Corridor scan main routine
+    // -------------------------------------------------------------------------
+    private void ScanCorridor(float tileZ)
     {
-        culpritsList = new List<BlockageDetailDTO.CulpritInfo>();
-        var uniqueColliders = new HashSet<Collider>();
+        float raycastY         = transform.position.y - rayHeightOffset;
+        int   horizontalRows   = Mathf.CeilToInt(tileLength / raycastSpacing);
+        float halfWidth        = tileWidth * 0.5f;
 
-        float halfWidth      = tileWidth * 0.5f;
-        const float step     = 0.05f;           // horizontal resolution of the scan
-        float continuousFree = 0f;               // running counter of free space
+        // running collection of blocking colliders (HashSet avoids duplicates fast)
+        var culpritsSet = new HashSet<Collider>();
+        var culpritsDTO = new List<BlockageDetailDTO.CulpritInfo>();
+        float firstBlockedZ = -1f;
 
-        for (float x = -halfWidth; x <= halfWidth; x += step)
+        // ── 1⃣  Probe rows ───────────────────────────────────────────────────
+        for (int i = 0; i <= horizontalRows; i++)
         {
-            Vector3 origin = new Vector3(x, raycastY, currentZ);
+            float currentZ = tileZ + (i * raycastSpacing);
+            if (!CheckHorizontalClearance(currentZ, raycastY, culpritsSet, culpritsDTO))
+            {
+                if (firstBlockedZ < 0f) firstBlockedZ = currentZ;
+            }
+        }
+
+        // ── 2⃣  Overlap sweep across the entire tile volume ──────────────────
+        Vector3 boxCenter = new(transform.position.x, raycastY + sweepHeight * 0.5f, tileZ + tileLength * 0.5f);
+        Vector3 boxHalf   = new(halfWidth, sweepHeight * 0.5f, tileLength * 0.5f);
+        Collider[] hits   = Physics.OverlapBox(boxCenter, boxHalf, Quaternion.identity, obstacleMask);
+
+        foreach (var col in hits)
+        {
+            if (culpritsSet.Add(col))               // brand‑new collider → add DTO row
+                culpritsDTO.Add(ToCulpritInfo(col));
+        }
+
+        // ── 3⃣  Report (only if something actually touches the lane) ─────────
+        if (culpritsDTO.Count > 0)
+        {
+            Debug.LogError($"[RUNWAY] Corridor blocked at tile Z={tileZ}");
+            BlockageReporter.ReportBlockage(tileZ, firstBlockedZ < 0 ? tileZ : firstBlockedZ, culpritsDTO);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // CheckHorizontalClearance  – returns true if the *row* has an open gap.
+    // Also gathers any colliders the downward rays hit.
+    // -------------------------------------------------------------------------
+    private bool CheckHorizontalClearance(
+        float currentZ,
+        float raycastY,
+        HashSet<Collider> culpritsSet,
+        List<BlockageDetailDTO.CulpritInfo> culpritsDTO)
+    {
+        float halfWidth       = tileWidth * 0.5f;
+        float stepX           = 0.05f;   // resolution across X
+        float currentGapWidth = 0f;
+
+        for (float x = -halfWidth; x <= halfWidth; x += stepX)
+        {
+            Vector3 origin = new(x, raycastY, currentZ);
 
             if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 5f, obstacleMask))
             {
-                // Blocked at this X → reset the free‑space counter
-                continuousFree = 0f;
+                currentGapWidth = 0f;    // reset gap count
 
-                // Record culprit (once per collider)
-                Collider col = hit.collider;
-                if (uniqueColliders.Add(col))
-                {
-                    string rootName  = col.transform.root.name.Replace("(Clone)", string.Empty);
-                    string childName = col.transform == col.transform.root
-                                        ? rootName
-                                        : $"{rootName}/{col.gameObject.name.Replace("(Clone)", string.Empty)}";
-
-                    culpritsList.Add(new BlockageDetailDTO.CulpritInfo
-                    {
-                        name     = childName,
-                        position = col.bounds.center,
-                        size     = col.bounds.size,
-                        layer    = LayerMask.LayerToName(col.gameObject.layer)
-                    });
-                }
+                if (culpritsSet.Add(hit.collider))
+                    culpritsDTO.Add(ToCulpritInfo(hit.collider));
             }
             else
             {
-                // Free point – accumulate
-                continuousFree += step;
-                if (continuousFree >= minClearanceWidth)
-                    return true; // a clear lane found for this row
+                currentGapWidth += stepX;
+                if (currentGapWidth >= minClearanceWidth)
+                    return true;        // row is passable, no need to check further X
             }
         }
 
-        return false; // insufficient clearance in this row
+        return false; // no sufficient gap found across the whole row
     }
 
-    /// <summary>
-    /// Sweeps an entire ground tile (length wise) with multiple probe rows and
-    /// reports every collider that makes the lane impassable in *any* row.
-    /// </summary>
-    private void ScanCorridor(float tileZ)
+    // -------------------------------------------------------------------------
+    // Helper – convert collider to DTO (root/child path, no "(Clone)")
+    // -------------------------------------------------------------------------
+    private static BlockageDetailDTO.CulpritInfo ToCulpritInfo(Collider col)
     {
-        float raycastY           = transform.position.y - rayHeightOffset;
-        int   horizontalRowCount = Mathf.CeilToInt(tileLength / raycastSpacing);
+        string rootName  = col.transform.root.name.Replace("(Clone)", "");
+        string childName = col.transform == col.transform.root
+                            ? rootName
+                            : $"{rootName}/{col.gameObject.name}";
 
-        var   allCulprits   = new List<BlockageDetailDTO.CulpritInfo>();
-        float firstBlockedZ = -1f;
-
-        for (int i = 0; i <= horizontalRowCount; i++)
+        return new BlockageDetailDTO.CulpritInfo
         {
-            float currentZ = tileZ + (i * raycastSpacing);
-
-            if (!CheckHorizontalClearance(currentZ, raycastY, out var rowCulprits))
-            {
-                if (firstBlockedZ < 0f) firstBlockedZ = currentZ;
-
-                // Merge rows, avoid duplicates based on name + position
-                foreach (var c in rowCulprits)
-                {
-                    bool already = allCulprits.Exists(k => k.name == c.name &&
-                                                         (k.position - c.position).sqrMagnitude < 1e-4f);
-                    if (!already) allCulprits.Add(c);
-                }
-            }
-        }
-
-        if (allCulprits.Count > 0)
-        {
-            Debug.LogError($"[RUNWAY] Corridor blocked at tile Z={tileZ}");
-            BlockageReporter.ReportBlockage(tileZ, firstBlockedZ, allCulprits);
-        }
+            name     = childName.Replace("(Clone)", ""),
+            position = col.bounds.center,
+            size     = col.bounds.size,
+            layer    = LayerMask.LayerToName(col.gameObject.layer)
+        };
     }
 
-    /***********************************************************************/
-    //                       Gizmos (editor‑only)                           
-    /***********************************************************************/
+    // -------------------------------------------------------------------------
+    // Debug gizmos – shows probe rows in Scene view
+    // -------------------------------------------------------------------------
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;
 
-        float tileZ = Mathf.Floor(transform.position.z / tileLength) * tileLength;
-        float raycastY = transform.position.y - rayHeightOffset;
-        int rows = Mathf.CeilToInt(tileLength / raycastSpacing);
-        float halfWidth = tileWidth * 0.5f;
+        float tileZ        = Mathf.Floor(transform.position.z / tileLength) * tileLength;
+        float raycastY     = transform.position.y - rayHeightOffset;
+        int   rows         = Mathf.CeilToInt(tileLength / raycastSpacing);
+        float halfWidth    = tileWidth * 0.5f;
 
         for (int i = 0; i <= rows; i++)
         {
             float currentZ = tileZ + (i * raycastSpacing);
-            Vector3 left  = new Vector3(-halfWidth, raycastY, currentZ);
-            Vector3 right = new Vector3( halfWidth, raycastY, currentZ);
-            Gizmos.DrawLine(left, right);
+            Vector3 from   = new(-halfWidth, raycastY, currentZ);
+            Vector3 to     = new(halfWidth,  raycastY, currentZ);
+            Gizmos.DrawLine(from, to);
         }
+
+        // Draw the overlap box (safety lane volume)
+        Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.25f);
+        Vector3 boxCenter = new(transform.position.x, raycastY + sweepHeight * 0.5f, tileZ + tileLength * 0.5f);
+        Vector3 boxSize   = new(tileWidth, sweepHeight, tileLength);
+        Gizmos.DrawCube(boxCenter, boxSize);
     }
 #endif
 }
