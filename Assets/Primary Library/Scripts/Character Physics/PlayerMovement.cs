@@ -36,6 +36,10 @@ public class PlayerMovement : MonoBehaviour
     private float respawnTimer = 0f;
     
     public float CurrentSpeed => isRunning ? runSpeed : 0;
+    
+    public bool IsGrounded => isGrounded;
+    public bool IsRunning => isRunning;
+
 
 
     public float RunSpeed
