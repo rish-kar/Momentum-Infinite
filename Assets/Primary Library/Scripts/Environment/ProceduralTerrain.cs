@@ -61,6 +61,10 @@ public class ProceduralTerrain : MonoBehaviour
 
     private const float NAVIGATIONAL_MESH_LOOKAHEAD_DISTANCE = 600f; // 300m ahead + 300m buffer
 
+    [SerializeField] float navAhead = 600f;   // was NAVIGATIONAL_MESH_LOOKAHEAD_DISTANCE
+    [SerializeField] float navBack  = 50f;    // include some distance behind the player
+    
+    
     // Called once when the game starts
     private void Awake()
     {
@@ -270,14 +274,11 @@ public class ProceduralTerrain : MonoBehaviour
 
         // Center NavMesh 300m ahead of player
         Vector3 playerPos = _player.transform.position;
-        Vector3 navMeshCenter = new Vector3(
-            0f,
-            0f,
-            playerPos.z + NAVIGATIONAL_MESH_LOOKAHEAD_DISTANCE / 2
-        );
+        float sizeZ   = navBack + navAhead;
+        float centerZ = playerPos.z + (navAhead - navBack) * 0.5f;
 
-        _navMeshSurface.transform.position = navMeshCenter;
-        _navMeshSurface.size = new Vector3(600f, 20f, NAVIGATIONAL_MESH_LOOKAHEAD_DISTANCE);
+        _navMeshSurface.transform.position = new Vector3(0f, 0f, centerZ);
+        _navMeshSurface.size              = new Vector3(600f, 20f, sizeZ);
 
         // Rebuild immediately when player moves significantly
         if (Mathf.Abs(playerPos.z - _lastPlayerZ) > 50f)
