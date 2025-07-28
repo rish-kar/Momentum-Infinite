@@ -40,6 +40,14 @@ public class FlyerCorridorScanner : MonoBehaviour
     #endregion ----------------------------------------------------------------
 
     private float _lastScannedTileZ = float.MinValue;
+    
+    EnvironmentObjectSpawnManager _spawnMgr;
+    
+    [SerializeField] private bool autoRemoveBlockers = true;   // show in Inspector
+
+    public void SetAutoRemove(bool on) => autoRemoveBlockers = on;
+
+
 
     // -------------------------------------------------------------------------
     // FixedUpdate
@@ -52,6 +60,20 @@ public class FlyerCorridorScanner : MonoBehaviour
         _lastScannedTileZ = tileZ;
         ScanCorridor(tileZ);
     }
+    
+    void Awake()
+    {
+        _spawnMgr = FindFirstObjectByType<EnvironmentObjectSpawnManager>();
+    }
+
+    Transform GetPrefabRoot(Transform t)
+    {
+        if (!_spawnMgr) return t;                          // fallback
+        var parent = _spawnMgr.transform;
+        while (t.parent && t.parent != parent) t = t.parent;
+        return t;
+    }
+
 
     // -------------------------------------------------------------------------
     // Corridor scan main routine
@@ -93,7 +115,19 @@ public class FlyerCorridorScanner : MonoBehaviour
         {
             Debug.LogError($"[RUNWAY] Corridor blocked at tile Z={tileZ}");
             BlockageReporter.ReportBlockage(tileZ, firstBlockedZ < 0 ? tileZ : firstBlockedZ, culpritsDTO);
+
+            if (autoRemoveBlockers)                    // <<< guard with the switch
+            {
+                foreach (var col in culpritsSet)
+                {
+                    if (!col) continue;
+                    var root = GetPrefabRoot(col.transform);
+                    if (root && root != _spawnMgr.transform)
+                        Destroy(root.gameObject);
+                }
+            }
         }
+
     }
 
     // -------------------------------------------------------------------------
