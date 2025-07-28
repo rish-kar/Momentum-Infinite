@@ -1,72 +1,85 @@
 using UnityEngine;
 
+/// <summary>
+/// Class to control the dust particles emitted by the feet of the player.
+/// Acts as a visual effects controller.
+/// </summary>
 [RequireComponent(typeof(PlayerMovement))]
 public class FXController : MonoBehaviour
 {
-   
-    [Header("References")]
-    [Tooltip("Your PlayerMovement component")]
-    public PlayerMovement player;
+    [Header("References Object")] 
+    public PlayerMovement player; // Reference to the PlayerMovement script
 
-    [Tooltip("Left‐foot dust particle system")]
-    public ParticleSystem leftDust;
+    [Tooltip("Left Foot dust particle system")]
+    public ParticleSystem leftFootDust; // Particle system attached to the left foot of the player
 
-    [Tooltip("Right‐foot dust particle system")]
-    public ParticleSystem rightDust;
+    [Tooltip("Right Foot dust particle system")]
+    public ParticleSystem rightFootDust; // Particle system attached to the right foot of the player
 
-    [Header("Tuning")]
-    [Tooltip("Speed at which dust emission just begins")]
-    public float minSpeedForDust = 1f;
+    [Header("Tuning")] 
+    [Tooltip("Speed at which dust emission just begins as the player starts moving")]
+    public float minSpeedForDust = 1f;  // Minimum Emission Rate - Starting
 
-    [Tooltip("Speed at which dust emission is at its maximum rate")]
-    public float maxSpeedForDust = 20f;
+    [Tooltip("Speed at which dust emission is at its maximum")]
+    public float maxSpeedForDust = 20f; // Maximum Emission Rate - Ending
 
-    [Tooltip("Maximum particles per unit moved (distance) at top speed")]
+    [Tooltip("Maximum particles per unit moved (distance) at highest speed")]
     public float maxDustRateOverDistance = 30f;
 
+    /// <summary>
+    /// Function to initialize the FXController called before the first frame.
+    /// </summary>
     void Start()
     {
         if (player == null)
             player = GetComponent<PlayerMovement>();
 
-        if (leftDust  != null) leftDust .Stop();
-        if (rightDust != null) rightDust.Stop();
+        if (leftFootDust != null) leftFootDust.Stop();
+        if (rightFootDust != null) rightFootDust.Stop();
     }
 
+    /// <summary>
+    /// Function called once per frame to update visual effects.
+    /// </summary>
     void Update()
     {
+        // Basic Null Checks
         if (player == null) return;
 
-        // only when both grounded AND running
+        // Only emit dust when the player is grounded and in continuous motion state
         if (player.IsGrounded && player.IsRunning)
         {
-            // normalize your speed into 0–1
             float t = Mathf.InverseLerp(minSpeedForDust, maxSpeedForDust, player.CurrentSpeed);
             float rate = t * maxDustRateOverDistance;
 
-            // helper to set each emitter
-            UpdateEmitter(leftDust, rate);
-            UpdateEmitter(rightDust, rate);
+            // Set the values for dust emission
+            UpdateEmitter(leftFootDust, rate);
+            UpdateEmitter(rightFootDust, rate);
         }
         else
         {
-            // stop both if not grounded or not running
-            if (leftDust  != null && leftDust .isEmitting) leftDust .Stop();
-            if (rightDust != null && rightDust.isEmitting) rightDust.Stop();
+            // Stop originating particles when the player is not in moving state
+            if (leftFootDust != null && leftFootDust.isEmitting) leftFootDust.Stop();
+            if (rightFootDust != null && rightFootDust.isEmitting) rightFootDust.Stop();
         }
     }
 
-    private void UpdateEmitter(ParticleSystem ps, float rateOverDistance)
+    /// <summary>
+    /// Get emission module, disable then and enable time-based emission.
+    /// Activate emission module and trigger play.
+    /// </summary>
+    /// <param name="particleSystem">Particle System Object</param>
+    /// <param name="rateOverDistance">Variable to cover rate over distance with particles</param>
+    private void UpdateEmitter(ParticleSystem particleSystem, float rateOverDistance)
     {
-        if (ps == null) return;
+        if (particleSystem == null) return;
 
-        var emission = ps.emission;
-        // ensure we're driving rate over distance, not time
-        emission.rateOverTime      = 0f;                           // zero out time‐driven
-        emission.rateOverDistance  = rateOverDistance;             // now dust follows movement
-        emission.enabled           = true;
+        var emission = particleSystem.emission;
+        emission.rateOverTime = 0f; 
+        emission.rateOverDistance = rateOverDistance; // Dust emission will follow movement
+        emission.enabled = true;
 
-        if (!ps.isEmitting && rateOverDistance > 0f)
-            ps.Play();
+        if (!particleSystem.isEmitting && rateOverDistance > 0f)
+            particleSystem.Play();
     }
 }

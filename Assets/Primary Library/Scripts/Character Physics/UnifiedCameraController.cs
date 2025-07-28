@@ -20,7 +20,7 @@ public class UnifiedCameraController : MonoBehaviour
     // Fixed Values for Camera Positioning behind/above the player
     // These offsets are used to position the camera correctly in both 2D and 3D modes.
     [Header("Camera Mode Parameters")] [SerializeField]
-    private Vector3 _offset3D = new Vector3(0f, 8.75f, -2f);
+    private Vector3 _offset3D = new Vector3(0f, 5.34f, -3.52f);
 
     [SerializeField] private Vector3 _offset2D = new Vector3(0f, 11.3f, 6.3f);
     [SerializeField] private float _transitionDuration = 1.0f;

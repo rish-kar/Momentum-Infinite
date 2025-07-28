@@ -2669,14 +2669,14 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7d24f73495494e7892bc3b0969920da8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnifiedCameraController
+  m_EditorClassIdentifier: GameScripts::UnifiedCameraController
   player: {fileID: 1076822218}
-  followSpeed: 5
-  useSmoothing: 1
-  offset3D: {x: 0, y: 4.62, z: -3.18}
-  offset2D: {x: 0, y: 11.3, z: 6.3}
-  transitionDuration: 1
-  debugCamera: 0
+  _followPlayerSpeed: 5
+  _useSmoothing: 1
+  _offset3D: {x: 0, y: 5.34, z: -3.52}
+  _offset2D: {x: 0, y: 11.3, z: 6.3}
+  _transitionDuration: 1
+  _debugCamera: 0
 --- !u!1 &920161667
 GameObject:
   m_ObjectHideFlags: 0
@@ -3303,8 +3303,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: GameScripts::FXController
   player: {fileID: 1076822220}
-  leftDust: {fileID: 1856707745}
-  rightDust: {fileID: 531320047}
+  leftFootDust: {fileID: 1856707745}
+  rightFootDust: {fileID: 531320047}
   minSpeedForDust: 1
   maxSpeedForDust: 20
   maxDustRateOverDistance: 3000
