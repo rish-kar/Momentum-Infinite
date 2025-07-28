@@ -4,18 +4,18 @@ using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
 
+
 public class ProceduralTerrain : MonoBehaviour
 {
-    [Header("Terrain Settings")] [SerializeField]
-    private GameObject _ground;
+    [Header("Terrain Settings")] 
+    [SerializeField] private GameObject _ground;
 
     [SerializeField] private GameObject _previousGround;
     [SerializeField] private GameObject _groundContainer;
     [SerializeField] private GameObject _treePrefab;
-    public bool _stopSpawningTerrain = false;
+    public bool stopSpawningTerrain = false;
 
-    [Header("Dynamic Spawning Settings")]
-    [SerializeField] private float spawnDistanceAhead = 500f; // Always keep 500 units ahead
+    [Header("Dynamic Spawning Settings")] 
     [SerializeField] private float minSpawnRate = 0.1f; // Minimum time between spawns (fast player)
     [SerializeField] private float maxSpawnRate = 1f; // Maximum time between spawns (slow player)
     [SerializeField] public float groundTileLength = 96f; // Length of each ground tile
@@ -49,8 +49,9 @@ public class ProceduralTerrain : MonoBehaviour
     [Header("Script References")] [SerializeField]
     private SkyboxChanger skyboxChanger;
 
-    [Header("Debug Settings")]
-    [SerializeField] private bool debugTerrain = false;
+    [Header("Debug Settings")] [SerializeField]
+    private bool debugTerrain = false;
+
     [SerializeField] private bool debugObjectSpawning = false;
 
     // Private variables for terrain spawning logic
@@ -60,13 +61,12 @@ public class ProceduralTerrain : MonoBehaviour
     private Vector3 _positionOfGround;
     private float lastPlayerZ; // Track player's last position for speed calculation
     private EnvironmentObjectSpawnManager objectSpawnManager; // Cache the spawn manager
-    
+
     private const float NAVMESH_LOOKAHEAD = 600f; // 300m ahead + 300m buffer
 
     private readonly List<NavMeshDataInstance> liveMeshes = new();
 
 
-    
     private void Awake()
     {
         // Null checks and Initialize Reference Block
@@ -96,20 +96,20 @@ public class ProceduralTerrain : MonoBehaviour
             {
                 _treePrefab = GameObject.FindGameObjectWithTag("Environment Objects");
             }
-            
+
             // Cache the EnvironmentObjectSpawnManager
             objectSpawnManager = FindFirstObjectByType<EnvironmentObjectSpawnManager>();
             if (objectSpawnManager == null && debugObjectSpawning)
             {
                 Debug.LogWarning("EnvironmentObjectSpawnManager not found in scene! Objects will not spawn.", this);
             }
-            
+
             // Log initialization status
             if (debugTerrain)
             {
                 Debug.Log($"ProceduralTerrain initialized - Player: {(_player ? _player.name : "NULL")}, " +
-                         $"Ground Container: {(_groundContainer ? _groundContainer.name : "NULL")}, " +
-                         $"Object Spawn Manager: {(objectSpawnManager ? "Found" : "NULL")}", this);
+                          $"Ground Container: {(_groundContainer ? _groundContainer.name : "NULL")}, " +
+                          $"Object Spawn Manager: {(objectSpawnManager ? "Found" : "NULL")}", this);
             }
         }
 
@@ -131,21 +131,22 @@ public class ProceduralTerrain : MonoBehaviour
             {
                 Debug.LogError("Player reference lost in ProceduralTerrain!", this);
             }
+
             return;
         }
-        
+
         _positionOfGround = _previousGround.transform.position;
 
         if (_positionOfGround.z > _player.transform.position.z + 1000)
         {
-            _stopSpawningTerrain = true;
+            stopSpawningTerrain = true;
         }
         else
         {
-            _stopSpawningTerrain = false;
+            stopSpawningTerrain = false;
         }
 
-        if (Time.time > _canFire && _stopSpawningTerrain == false) // restricts spawning
+        if (Time.time > _canFire && stopSpawningTerrain == false) // restricts spawning
         {
             _canFire = Time.time + _timeRate; //Time Control Formula
             StartSpawning(); //Spawn Function
@@ -156,7 +157,6 @@ public class ProceduralTerrain : MonoBehaviour
             UpdateNavMeshSurface();
             nextNavMeshUpdate = Time.time + navMeshUpdateInterval;
         }
-        
     }
 
 
@@ -166,8 +166,9 @@ public class ProceduralTerrain : MonoBehaviour
         {
             Debug.Log($"StartSpawning called - Time: {Time.time}, Player Z: {_player.transform.position.z}", this);
         }
-        
-        _previousGroundLoc = new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + groundTileLength));
+
+        _previousGroundLoc =
+            new Vector3(_positionOfGround.x, _positionOfGround.y, (_positionOfGround.z + groundTileLength));
 
         if (skyboxChanger == null)
             skyboxChanger = FindFirstObjectByType<SkyboxChanger>();
@@ -180,7 +181,7 @@ public class ProceduralTerrain : MonoBehaviour
         {
             Debug.Log($"Loading ground prefab from path: {path}", this);
         }
-        
+
         GameObject groundPrefab = Resources.Load<GameObject>(path);
         if (groundPrefab == null)
         {
@@ -188,6 +189,7 @@ public class ProceduralTerrain : MonoBehaviour
             {
                 Debug.LogWarning($"Ground prefab not found at {path}, using fallback", this);
             }
+
             groundPrefab = _ground; // fall back to whatever was set
         }
 
@@ -218,7 +220,8 @@ public class ProceduralTerrain : MonoBehaviour
             }
             else if (debugObjectSpawning)
             {
-                Debug.LogWarning($"No EnvironmentObjectSpawnManager found - objects not spawned on {_newGround.name}", this);
+                Debug.LogWarning($"No EnvironmentObjectSpawnManager found - objects not spawned on {_newGround.name}",
+                    this);
             }
         }
 
@@ -237,20 +240,20 @@ public class ProceduralTerrain : MonoBehaviour
         // if (ghostRunnerAgent != null)
         // {
         //     ghostRunnerAgent.SetTarget(_newGround.transform);
-        
+
 
         StartCoroutine(RebuildNavmeshAsync());
 
         AdjustSpawnRate();
-        
+
         if (debugTerrain)
         {
             Debug.Log($"Spawned new ground: {_newGround.name} at position {_newGround.transform.position}", this);
         }
-        
+
         // Modify StartSpawning method (add at end)
         tilesSinceLastBake++;
-        if (tilesSinceLastBake >= bakeInterval || 
+        if (tilesSinceLastBake >= bakeInterval ||
             transform.position.z - lastPlayerZ > groundTileLength * 2)
         {
             tilesSinceLastBake = 0;
@@ -261,7 +264,7 @@ public class ProceduralTerrain : MonoBehaviour
     private void AdjustSpawnRate()
     {
         if (_player == null) return;
-        
+
         // Calculate the player's speed based on their movement since the last frame
         float playerSpeed = Mathf.Abs(_player.transform.position.z - lastPlayerZ) / Time.deltaTime;
 
@@ -269,24 +272,12 @@ public class ProceduralTerrain : MonoBehaviour
         _timeRate = Mathf.Clamp(maxSpawnRate - playerSpeed * 0.01f, minSpawnRate, maxSpawnRate);
 
         lastPlayerZ = _player.transform.position.z;
-        
+
         if (debugTerrain && Time.frameCount % 120 == 0) // Log every 2 seconds
         {
             Debug.Log($"Player speed: {playerSpeed:F2}, Spawn rate: {_timeRate:F2}", this);
         }
     }
-
-    // public void SpawnATree()
-    // {
-    //     float treeX = Random.Range(-7.1f, 10.55f);
-    //     float treeX2 = Random.Range(-7.1f, 10.55f);
-    //     float treeX3 = Random.Range(-7.1f, 10.55f);
-    //
-    //     //(_treePrefab, new Vector3(treeX, 0.4326f, Random.Range(_newgroundZAxis-5.0f,_newgroundZAxis+5.0f)), Quaternion.identity);
-    //     // Instantiate(_treePrefab, new Vector3(treeX2, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
-    //     // Instantiate(_treePrefab, new Vector3(treeX3, 0.4326f, Random.Range(_newgroundZAxis - 5.0f, _newgroundZAxis + 5.0f)), Quaternion.identity);
-    // }
-
 
     private void UpdateNavMeshSurface()
     {
@@ -295,6 +286,7 @@ public class ProceduralTerrain : MonoBehaviour
             GameObject navMeshObj = GameObject.FindGameObjectWithTag("Navigational Mesh");
             if (navMeshObj != null) navMeshSurface = navMeshObj.GetComponent<NavMeshSurface>();
         }
+
         if (navMeshSurface == null || _player == null) return;
 
         // Center NavMesh 300m ahead of player
@@ -302,12 +294,12 @@ public class ProceduralTerrain : MonoBehaviour
         Vector3 navMeshCenter = new Vector3(
             0f,
             0f,
-            playerPos.z + NAVMESH_LOOKAHEAD/2
+            playerPos.z + NAVMESH_LOOKAHEAD / 2
         );
 
         navMeshSurface.transform.position = navMeshCenter;
         navMeshSurface.size = new Vector3(600f, 20f, NAVMESH_LOOKAHEAD);
-    
+
         // Rebuild immediately when player moves significantly
         if (Mathf.Abs(playerPos.z - lastPlayerZ) > 50f)
         {
@@ -324,7 +316,7 @@ public class ProceduralTerrain : MonoBehaviour
         // ► collect every collider/renderer under the surface volume ―
         var sources = new List<NavMeshBuildSource>();
         NavMeshBuilder.CollectSources(
-            navMeshSurface.transform,     // root
+            navMeshSurface.transform, // root
             navMeshSurface.layerMask,
             navMeshSurface.useGeometry,
             navMeshSurface.defaultArea,
@@ -341,9 +333,9 @@ public class ProceduralTerrain : MonoBehaviour
             sources,
             bounds);
 
-        yield return bakeJob;             // wait until finished
+        yield return bakeJob; // wait until finished
     }
-    
+
     // public float LatestGroundZ
     // {
     //     get
@@ -353,7 +345,6 @@ public class ProceduralTerrain : MonoBehaviour
     //             : 0f;
     //     }
     // }
-    
-    public float LatestGroundZ => _previousGround ? _previousGround.transform.position.z : 0f;
 
+    public float LatestGroundZ => _previousGround ? _previousGround.transform.position.z : 0f;
 }

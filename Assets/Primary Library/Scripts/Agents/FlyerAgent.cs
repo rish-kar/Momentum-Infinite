@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class FlyerAgent : MonoBehaviour
 {
-    
-    /* ─────  Inspector  ───── */
     [Header("References")]
     [SerializeField] private Transform          player;      // runner
     [SerializeField] private ProceduralTerrain  terrain;     // terrain script that has LatestGroundZ

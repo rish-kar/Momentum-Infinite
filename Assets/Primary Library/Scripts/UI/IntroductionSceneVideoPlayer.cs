@@ -1,32 +1,40 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Video;
+using System.Runtime.InteropServices; // ← add this
 
 public class IntroductionSceneVideoPlayer : MonoBehaviour
 {
-    public string nextSceneName = "Ground Level"; 
+    public string nextSceneName = "Ground Level";
     private VideoPlayer videoPlayer;
+
+    // Only include this declaration in a WebGL build
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern void PlayIntroVideo();
+#endif
 
     void Start()
     {
-        // Get the VideoPlayer component
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Call your JS plugin to show an HTML5 <video>
+            PlayIntroVideo();
+#else
+        // Normal Unity VideoPlayer path
         videoPlayer = GetComponent<VideoPlayer>();
-
-        // Subscribe to the VideoPlayer's loopPointReached event
         videoPlayer.loopPointReached += OnVideoFinished;
+        videoPlayer.Play();
+#endif
     }
 
     void OnVideoFinished(VideoPlayer vp)
     {
-        // Load the next scene when the video finishes
         SceneManager.LoadScene(nextSceneName);
     }
-    
+
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space)) // Replace with your desired key
-        {
+        if (Input.GetKeyDown(KeyCode.Space))
             SceneManager.LoadScene(nextSceneName);
-        }
     }
 }
