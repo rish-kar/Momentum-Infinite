@@ -308,20 +308,18 @@ MonoBehaviour:
   _ground: {fileID: 2684501641573772601, guid: fe9c9fb6527966347a78d278cc042dc5, type: 3}
   _previousGround: {fileID: 2684501641451910182}
   _groundContainer: {fileID: 1574626338}
-  _treePrefab: {fileID: 0}
-  _stopSpawningTerrain: 0
-  spawnDistanceAhead: 500
-  minSpawnRate: 0.1
-  maxSpawnRate: 1
+  stopSpawningTerrain: 0
+  _minSpawnRate: 0.1
+  _maxSpawnRate: 1
   groundTileLength: 96
-  ghostRunnerAgent: {fileID: 0}
+  _ghostRunnerAgent: {fileID: 0}
   _player: {fileID: 1076822217}
   _canFire: -1
   _timeRate: 1
-  navMeshSurface: {fileID: 0}
-  skyboxChanger: {fileID: 0}
-  debugTerrain: 0
-  debugObjectSpawning: 0
+  _navMeshSurface: {fileID: 0}
+  _skyboxChanger: {fileID: 0}
+  _debugTerrain: 0
+  _debugObjectSpawning: 0
 --- !u!1 &58008921
 GameObject:
   m_ObjectHideFlags: 0
@@ -415,7 +413,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &59315891
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1204,7 +1202,7 @@ RectTransform:
   m_Father: {fileID: 1873808441}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0.17, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2081,10 +2079,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 59315894}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.9480001, y: 0.011000001}
-  m_AnchorMax: {x: 0.98200005, y: 0.066}
-  m_AnchoredPosition: {x: 0.28979492, y: 0.9425049}
-  m_SizeDelta: {x: -6.4660034, y: -6.4990005}
+  m_AnchorMin: {x: 0.95652086, y: 0.015699683}
+  m_AnchorMax: {x: 0.98100007, y: 0.066}
+  m_AnchoredPosition: {x: -0.107666016, y: -0.016235352}
+  m_SizeDelta: {x: -1.6708999, y: -0.41639996}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &699478810
 MonoBehaviour:
@@ -3015,20 +3013,18 @@ MonoBehaviour:
   _ground: {fileID: 2684501641573772601, guid: fe9c9fb6527966347a78d278cc042dc5, type: 3}
   _previousGround: {fileID: 2684501641451910182}
   _groundContainer: {fileID: 1574626338}
-  _treePrefab: {fileID: 0}
-  _stopSpawningTerrain: 0
-  spawnDistanceAhead: 500
-  minSpawnRate: 0.1
-  maxSpawnRate: 1
+  stopSpawningTerrain: 0
+  _minSpawnRate: 0.1
+  _maxSpawnRate: 1
   groundTileLength: 96
-  ghostRunnerAgent: {fileID: 920161669}
+  _ghostRunnerAgent: {fileID: 920161669}
   _player: {fileID: 1076822217}
   _canFire: -1
   _timeRate: 1
-  navMeshSurface: {fileID: 1315532083}
-  skyboxChanger: {fileID: 1219907408}
-  debugTerrain: 0
-  debugObjectSpawning: 0
+  _navMeshSurface: {fileID: 1315532083}
+  _skyboxChanger: {fileID: 1219907408}
+  _debugTerrain: 0
+  _debugObjectSpawning: 0
 --- !u!54 &1076822222
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -3475,8 +3471,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 447212745}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.17, y: 0}
-  m_AnchorMax: {x: 0.17, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3551,7 +3547,7 @@ RectTransform:
   m_Father: {fileID: 218177298}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0.17, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3731,8 +3727,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 199600067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.17, y: 0}
-  m_AnchorMax: {x: 0.17, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -5008,7 +5004,7 @@ RectTransform:
   m_Father: {fileID: 1720543420}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0.17, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -5128,68 +5124,6 @@ ParticleSystem:
     type: 3}
   m_PrefabInstance: {fileID: 4236392131098442058}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &1868166892
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 151464, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_Name
-      value: PF_1_1
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 1.4009552
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.43269396
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -30.010368
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 482492, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5890317658558718165, guid: c94905fd4461ede4e845db6bbd3b9594,
-        type: 3}
-      propertyPath: m_IsKinematic
-      value: 1
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: c94905fd4461ede4e845db6bbd3b9594, type: 3}
 --- !u!1 &1873808440
 GameObject:
   m_ObjectHideFlags: 0
@@ -5703,8 +5637,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1051083097}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.17, y: 0}
-  m_AnchorMax: {x: 0.17, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6072,7 +6006,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlyerAgent
   player: {fileID: 1076822218}
-  terrain: {fileID: 0}
+  terrain: {fileID: 1076822221}
   height: 14.5
   lateralOffset: 0
   forwardOffset: 200
@@ -6327,4 +6261,3 @@ SceneRoots:
   - {fileID: 631977131}
   - {fileID: 826201869}
   - {fileID: 1496198075}
-  - {fileID: 1868166892}
