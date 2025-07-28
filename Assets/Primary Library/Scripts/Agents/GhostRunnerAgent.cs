@@ -43,6 +43,6 @@ public class GhostRunnerAgent : MonoBehaviour
     }
 
     /* 4 ─ diagnostics */
-    void OnCollisionEnter(Collision c) =>
-        Debug.Log($"Ghost hit {c.gameObject.name} @ {Time.time:F2}s");
+    // void OnCollisionEnter(Collision c) =>
+        // Debug.Log($"Ghost hit {c.gameObject.name} @ {Time.time:F2}s");
 }
