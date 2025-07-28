@@ -1,67 +1,79 @@
 using UnityEngine;
 
+/// <summary>
+/// This script is a unified camera controller that is responsible for the following tasks:
+/// - Following the player in 2D and 3D modes.
+/// - Switching between 2D and 3D camera modes with seamless transitions.
+/// - Maintaining offsets (distance) for both modes.
+/// - Ensuring camera reaching player with adjustable parameters.
+/// </summary>
 public class UnifiedCameraController : MonoBehaviour
 {
     [Header("Target Settings")]
-    public Transform player;
-    
-    [Header("Camera Follow Settings")]
-    [SerializeField] private float followSpeed = 5f;
-    [SerializeField] private bool useSmoothing = true;
-    
-    [Header("Camera Mode Settings")]
-    [SerializeField] private Vector3 offset3D = new Vector3(0f, 8.75f, -2f); // Fixed offset as requested
-    [SerializeField] private Vector3 offset2D = new Vector3(0f, 11.3f, 6.3f);
-    [SerializeField] private float transitionDuration = 1.0f;
-    
-    [Header("Debug Settings")]
-    [SerializeField] private bool debugCamera = false;
-    
-    // Internal state
-    private Vector3 currentOffset;
-    private Vector3 velocity = Vector3.zero;
-    private Quaternion originalRotation;
-    private bool is2D = false;
-    private Vector3 lastOffset3D;
-    private Vector3 lastOffset2D;
-    private PlayerMovement playerMovement;
-    private Vector3 initialPlayerPosition; // Store initial player position for X reference
-    
-    // Transition state
-    private bool isTransitioning = false;
-    private float transitionTimer = 0f;
-    private Vector3 startOffset;
-    private Quaternion startRotation;
-    private Quaternion targetRotation;
+    public Transform player; // Transform (position, rotation and scale values) of the player
 
+    [Header("Camera Follow Parameters")] [SerializeField]
+    private float _followPlayerSpeed = 5f; // The speed at which the camera reaches the player's position
+
+    [SerializeField] private bool _useSmoothing = true;
+
+    // Fixed Values for Camera Positioning behind/above the player
+    // These offsets are used to position the camera correctly in both 2D and 3D modes.
+    [Header("Camera Mode Parameters")] [SerializeField]
+    private Vector3 _offset3D = new Vector3(0f, 8.75f, -2f);
+
+    [SerializeField] private Vector3 _offset2D = new Vector3(0f, 11.3f, 6.3f);
+    [SerializeField] private float _transitionDuration = 1.0f;
+
+    [Header("Debug Triggers")] [SerializeField]
+    private bool _debugCamera = false; // Minor debug option to check camera movements in inspector
+
+    // Basic Variables to track the internal state of the camera
+    private Vector3 _currentPlayerOffset;
+    private Vector3 _cameraVelocity = Vector3.zero;
+    private Quaternion _originalCameraRotation;
+    private bool _is2DEnabled = false;
+    private Vector3 _previousOffset3D;
+    private Vector3 _previousOffset2D;
+    private PlayerMovement _playerMovement; // Reference to the PlayerMovement script
+    private Vector3 _initialPlayerPos; // Stores the initial transform position of the player
+
+    // Variables to handle transitions between 2D and 3D modes
+    private bool _isTransitioningNow = false;
+    private float _transitioningTimer = 0f;
+    private Vector3 _initialOffset;
+    private Quaternion _initialiseRotation; // Quaternion is useed to handle rotations in Unity
+    private Quaternion _targetRotation;
+
+    private readonly Vector3 ROTATION_OFFSET_2D = new Vector3(90f, 0f, 0f);
+
+    /// <summary>
+    /// Start is called before the first frame update.
+    /// </summary>
     void Start()
     {
         InitializeCamera();
     }
-    
+
+    /// <summary>
+    /// Method to begin initialisation of the camera on the start of the game.
+    /// Used for setting up the the player object reference, offsets and rotation.
+    /// </summary>
     private void InitializeCamera()
     {
         // Validate player reference with multiple fallback methods
         if (player == null)
         {
-            // Method 1: Find by tag
-            var playerObject = GameObject.FindGameObjectWithTag("Player");
-            if (playerObject != null)
+            // Attempt to find the player script reference by type PlayerMovement
+            // First attempt was to find the player by tag, but it was later switched since multiple character prefabs 
+            // in future can have the same tag.
+            _playerMovement = FindFirstObjectByType<PlayerMovement>();
+            if (_playerMovement != null)
             {
-                player = playerObject.transform;
-                playerMovement = playerObject.GetComponent<PlayerMovement>();
+                player = _playerMovement.transform;
             }
-            else
-            {
-                // Method 2: Find by PlayerMovement component
-                playerMovement = FindFirstObjectByType<PlayerMovement>();
-                if (playerMovement != null)
-                {
-                    player = playerMovement.transform;
-                }
-            }
-            
-            if (player != null && debugCamera)
+
+            if (player != null && _debugCamera)
             {
                 Debug.Log($"Player auto-assigned: {player.name}", this);
             }
@@ -69,79 +81,91 @@ public class UnifiedCameraController : MonoBehaviour
 
         if (player == null)
         {
-            Debug.LogError("CRITICAL: Player with PlayerMovement script not found in scene. Camera cannot follow.", this);
+            Debug.LogError("CRITICAL: Player with PlayerMovement script not found in scene. Camera cannot follow.",
+                this);
             enabled = false;
             return;
         }
 
-        // Store the camera's initial rotation for 3D mode
-        originalRotation = transform.rotation;
-        
-        // Store initial player position for X reference
-        initialPlayerPosition = player.position;
-        
-        // Initialize with 3D offset
-        currentOffset = offset3D;
-        lastOffset3D = offset3D;
-        lastOffset2D = offset2D;
-        
-        // Set initial position immediately with correct X positioning
+        // Store the initial rotation of the camera before any modifications
+        _originalCameraRotation = transform.rotation;
+
+        // Store the initial position of the player
+        _initialPlayerPos = player.position;
+
+        // Initialising the offsets depending upon the mode
+        _currentPlayerOffset = _offset3D;
+        _previousOffset3D = _offset3D;
+        _previousOffset2D = _offset2D;
+
+        // Setting the target position according to the initial position + player offsets in X and Y Axis
         Vector3 targetPos = new Vector3(
-            initialPlayerPosition.x, // Same X as initial player position
-            player.position.y + currentOffset.y,
-            player.position.z + currentOffset.z
+            _initialPlayerPos
+                .x, // Same X as initial player position as the camera is in 3rd Person and is positioned right behind the player in 3D view
+            player.position.y +
+            _currentPlayerOffset
+                .y, // Y offset indicates that the height of the camera will be above the player so that view of the environment is clear while movement
+            player.position.z +
+            _currentPlayerOffset.z // Z offset indicates that the camera will be positioned behind the player in 3D mode
         );
         transform.position = targetPos;
-        
-        if (debugCamera)
+
+        if (_debugCamera)
         {
-            Debug.Log($"UnifiedCameraController initialized. Player: {player.name}, " +
-                     $"Initial offset: {currentOffset}, Camera pos: {transform.position}", this);
+            Debug.Log($"UnifiedCameraController initialised. Player: {player.name}, " +
+                      $"Initial offset values: {_currentPlayerOffset}, Camera position: {transform.position}", this);
         }
     }
 
+    /// <summary>
+    /// This function is called whenever the inspector has offset values changed in play mode.
+    /// It is useful for real-time dynamic adjustments without needing the game to be stopped.
+    /// </summary>
     void OnValidate()
     {
-        // This triggers whenever inspector values change in play mode
         if (Application.isPlaying && player != null)
         {
-            if (!is2D && offset3D != lastOffset3D)
+            if (!_is2DEnabled && _offset3D != _previousOffset3D)
             {
-                currentOffset = offset3D;
-                lastOffset3D = offset3D;
-                if (debugCamera)
+                _currentPlayerOffset = _offset3D;
+                _previousOffset3D = _offset3D;
+                if (_debugCamera)
                 {
-                    Debug.Log($"3D Offset updated to: {offset3D}", this);
+                    Debug.Log($"3D Offset updated to: {_offset3D}", this);
                 }
             }
-            else if (is2D && offset2D != lastOffset2D)
+            else if (_is2DEnabled && _offset2D != _previousOffset2D)
             {
-                currentOffset = offset2D;
-                lastOffset2D = offset2D;
-                if (debugCamera)
+                _currentPlayerOffset = _offset2D;
+                _previousOffset2D = _offset2D;
+                if (_debugCamera)
                 {
-                    Debug.Log($"2D Offset updated to: {offset2D}", this);
+                    Debug.Log($"2D Offset updated to: {_offset2D}", this);
                 }
             }
         }
     }
 
+    /// <summary>
+    /// LateUpdate is called once per frame after all Update methods have been called.
+    /// This is where we handle camera following the player and mode switching.
+    /// It ensures that the camera updates after the player has moved, providing a smooth following effect and transitioning effect.
+    /// </summary>
     void LateUpdate()
     {
         // Always check for player, disable if it gets destroyed
-        if (player == null) 
+        if (player == null)
         {
-            if(enabled && debugCamera) Debug.LogError("Player reference lost. Disabling camera controller.", this);
-            enabled = false;
+            if (enabled && _debugCamera) Debug.LogError("Player reference lost. Disabling camera controller.", this);
+            enabled = false; // Disable script if player is null
             return;
         }
-        
-        // Handle input for mode switching
+
         HandleInput();
-        
-        // If a transition is active, it handles position and rotation updates.
-        // Otherwise, the standard follow logic runs.
-        if (isTransitioning)
+
+        // If a transition is in progress, it handles position and rotation updates.
+        // If a transition is not in progress, simple follow mechanism continues.
+        if (_isTransitioningNow)
         {
             UpdateTransition();
         }
@@ -150,102 +174,102 @@ public class UnifiedCameraController : MonoBehaviour
             FollowPlayer();
         }
     }
-    
+
+    /// <summary>
+    /// Function used to switch between 2D and 3D camera modes.
+    /// Triggers camera movement from 3rd person view to top-down view and vice versa.
+    /// </summary>
     private void HandleInput()
     {
-        // Toggle between 2D and 3D when "C" is pressed
-        if (Input.GetKeyDown(KeyCode.C) && !isTransitioning)
+        // Toggle between 2D and 3D when "C" is pressed, "C" stands for Camera
+        if (Input.GetKeyDown(KeyCode.C) && !_isTransitioningNow)
         {
-            is2D = !is2D;
+            _is2DEnabled = !_is2DEnabled;
             BeginTransition();
         }
     }
-    
+
+    /// <summary>
+    /// The function responsible for the primary movement to follow the player.
+    /// Uses target position based on player's position and offset.
+    /// </summary>
     private void FollowPlayer()
     {
-        // Calculate target position with proper X axis handling
         Vector3 targetPosition;
-        
-        if (is2D)
+
+        if (_is2DEnabled)
         {
             // In 2D mode, follow normally
-            targetPosition = player.position + currentOffset;
+            targetPosition = player.position + _currentPlayerOffset;
         }
         else
         {
-            // In 3D mode, use initial player X position, follow Y and Z
+            // In 3D mode, follow Y and Z
             targetPosition = new Vector3(
-                player.position.x + currentOffset.x,
-                player.position.y + currentOffset.y,
-                player.position.z + currentOffset.z
+                player.position.x + _currentPlayerOffset.x,
+                player.position.y + _currentPlayerOffset.y,
+                player.position.z + _currentPlayerOffset.z
             );
         }
-        
-        // Apply smoothing if enabled
-        if (useSmoothing)
+
+        if (_useSmoothing)
         {
-            transform.position = Vector3.Lerp(transform.position, targetPosition, followSpeed * Time.deltaTime);
+            // Using Lerp functionality for smooth transition
+            transform.position = Vector3.Lerp(transform.position, targetPosition, _followPlayerSpeed * Time.deltaTime);
         }
         else
         {
+            // Transition without smoothing (direct assignment)
             transform.position = targetPosition;
         }
-        
-        if (debugCamera && Time.frameCount % 60 == 0) // Log once per second
+
+        if (_debugCamera && Time.frameCount % 60 == 0) // Log once per second
         {
-            Debug.Log($"Camera following - Mode: {(is2D ? "2D" : "3D")}, " +
-                     $"Player pos: {player.position}, Camera pos: {transform.position}, " +
-                     $"Target pos: {targetPosition}", this);
+            Debug.Log($"Camera following - Mode: {(_is2DEnabled ? "2D" : "3D")}, " +
+                      $"Player position: {player.position}, Camera position: {transform.position}, " +
+                      $"Target position: {targetPosition}", this);
         }
     }
-    
+
+    /// <summary>
+    /// Camera movement triggered by the mode switch from input function.
+    /// </summary>
     private void BeginTransition()
     {
-        isTransitioning = true;
-        transitionTimer = 0f;
-        
-        // Store starting values
-        startOffset = currentOffset;
-        startRotation = transform.rotation;
-        
-        // Set target values based on mode
-        Vector3 targetOffset = is2D ? offset2D : offset3D;
-        targetRotation = is2D ? Quaternion.Euler(90f, 0f, 0f) : originalRotation;
-        
-        // Update current offset for the transition
-        currentOffset = targetOffset;
-        
-        if (debugCamera)
-        {
-            Debug.Log($"Starting camera transition to {(is2D ? "2D" : "3D")} mode. " +
-                     $"From offset: {startOffset} to {targetOffset}", this);
-        }
+        _isTransitioningNow = true;
+        _transitioningTimer = 0f;
+        _initialOffset = _currentPlayerOffset;
+        _initialiseRotation = transform.rotation;
+
+        // Depending upon the mode that is selected on the basis of the flag, set offset and rotation
+        Vector3 targetOffset = _is2DEnabled ? _offset2D : _offset3D;
+        _targetRotation = _is2DEnabled ? Quaternion.Euler(ROTATION_OFFSET_2D) : _originalCameraRotation;
+        _currentPlayerOffset = targetOffset;
     }
-    
+
+    /// <summary>
+    /// Function to update the transition progress and increment the timer.
+    /// Calculates normalised progress and ends the transition when it reaches 100%.
+    /// </summary>
     private void UpdateTransition()
     {
-        transitionTimer += Time.deltaTime;
-        float t = transitionTimer / transitionDuration;
-        
-        if (t >= 1f)
+        _transitioningTimer += Time.deltaTime;
+        float transitionProgress = _transitioningTimer / _transitionDuration;
+
+        if (transitionProgress >= 1f)
         {
             // Transition complete
-            t = 1f;
-            isTransitioning = false;
-            
-            if (debugCamera)
-            {
-                Debug.Log($"Camera transition to {(is2D ? "2D" : "3D")} mode completed", this);
-            }
+            transitionProgress = 1f;
+            _isTransitioningNow = false;
         }
-        
-        // Smoothly interpolate offset and rotation
-        Vector3 currentTargetOffset = Vector3.Lerp(startOffset, currentOffset, t);
-        Quaternion currentTargetRotation = Quaternion.Slerp(startRotation, targetRotation, t);
-        
-        // Apply position based on interpolated offset
+
+        // Using Lerp and Slerp to interpolate the position and rotation smoothly
+        Vector3 currentTargetOffset = Vector3.Lerp(_initialOffset, _currentPlayerOffset, transitionProgress);
+        Quaternion currentTargetRotation = Quaternion.Slerp(_initialiseRotation, _targetRotation, transitionProgress);
+
+        // Switch position based on the mode
         Vector3 targetPosition;
-        if (is2D)
+        if (_is2DEnabled)
         {
             targetPosition = player.position + currentTargetOffset;
         }
@@ -257,7 +281,7 @@ public class UnifiedCameraController : MonoBehaviour
                 player.position.z + currentTargetOffset.z
             );
         }
-        
+
         transform.position = targetPosition;
         transform.rotation = currentTargetRotation;
     }

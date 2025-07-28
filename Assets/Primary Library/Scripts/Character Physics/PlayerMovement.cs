@@ -1,60 +1,83 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// This script is responsible for handling player movement, including running, jumping and handles
+/// animation states for the player which is switched depending upon the actions performed.
+/// </summary>
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Settings")] [SerializeField]
-    public float runSpeed = 8f;
+    public float runSpeed = 8f; // Base running speed (forward force)
 
-    [SerializeField] public float sideSpeed = 12f;
-    [SerializeField] private float jumpForce = 7f;
-    [SerializeField] private float jumpForwardBoost = 4f;
+    [SerializeField] public float sideSpeed = 12f; // Speed for side movement (sideways force)
+    [SerializeField] private float _jumpForce = 7f; // Force that is applied while jumping
+    [SerializeField] private float _jumpForwardBoost = 4f; // Additional boost while jumping forward during running state
 
     [Header("Visual Settings")] [SerializeField]
-    private float leanAngle = 15f;
+    private float _angleOfLean = 15f; // Angle direction while applying sideways movement (rotates player direction)
 
-    [SerializeField] private float leanSpeed = 8f;
+    [SerializeField] private float _speedOfLean = 8f; // The speed at which the player is rotated to lean either left or right
 
     [Header("Object References")] [SerializeField]
-    private Transform playerModel;
+    private Transform _playerModel; // Reference to the player object's positional components
 
-    [SerializeField] private Rigidbody rb;
-    [SerializeField] private Animator anim;
-    [SerializeField] private Transform feet;
-    [SerializeField] private LayerMask groundMask = ~0;
-    [SerializeField] private float groundCheckDistance = 0.3f;
+    [SerializeField] private Rigidbody _rigidBodyComponent; // Variable to hold the Rigidbody component for the player (physics component)
+    [SerializeField] private Animator _animatorComponent; // Variable to hold the component that handles animation states for the player (visual component)
+    [SerializeField] private Transform _feetOfPlayer; // The reference to the _feetOfPlayer of the character for checking grounded state
+    [SerializeField] private LayerMask _groundMask = ~0; // Mask to determine the ground (using bitwise operator here to avoid compile time dependency because of multiple layers being present)
+    [SerializeField] private float _groundCheckDistance = 0.3f; // Distance between the _feetOfPlayer and the ground to check if the player is grounded
 
-    [Header("Debug")] [SerializeField] private bool debugMovement = false;
-    private Vector3 lastSafePosition;
+    [Header("Debug")] [SerializeField] private bool _movementDebugger = false; // Field to check test and debug movement
 
     [Header("Respawn Settings")] [SerializeField]
-    private Animator respawnAnimator; // Assign the Canvas animator in inspector
-
-    [SerializeField] private float respawnAnimationLength = 3f; // Length of your respawn animation
-    private bool isRespawning = false;
-    private float respawnTimer = 0f;
+    private Animator _respawnAnimator; 
+    private Vector3 _lastSafePosition; 
+    [SerializeField] private float _respawnAnimationLength = 3f; // Length of respawn animation
+    private bool _isRespawning = false;
+    private float _respawnTimer = 0f;
     
-    public float CurrentSpeed => isRunning ? runSpeed : 0;
+    // Tracker variables to detemine the movement state
+    private bool _isGrounded = true;
+    private bool _isRunning;
+    private bool _isJumping;
+    private float _horizontalInput; // Special variable to check if there is horizontal input
+
+
+    /// <summary>
+    /// Gets the current speed of the player based on whether they are running or not.
+    /// </summary>
+    public float CurrentSpeed => _isRunning ? runSpeed : 0;
     
-    public bool IsGrounded => isGrounded;
-    public bool IsRunning => isRunning;
-
-
-
+    /// <summary>
+    /// Checks if player is grounded or not.
+    /// </summary>
+    public bool IsGrounded => _isGrounded;
+    
+    /// <summary>
+    /// Checks if player is running or not.
+    /// </summary>
+    public bool IsRunning => _isRunning;
+    
+    /// <summary>
+    /// Gets the forward running speed of the player.
+    /// </summary>
     public float RunSpeed
     {
         get => runSpeed;
         set => runSpeed = value;
     }
     
+    /// <summary>
+    /// Gets or sets the sideways speed of the player.
+    /// </summary>
     public float SideSpeed
     {
         get => sideSpeed;
         set => sideSpeed = value;
     }
-    
-    // Animation states
+
+    // Enumeration to hold animation states
     private enum AnimationState
     {
         Idle,
@@ -64,46 +87,49 @@ public class PlayerMovement : MonoBehaviour
         Jumping,
         Falling
     }
-
-    private AnimationState currentAnimState;
-
-    // Movement state
-    private bool isGrounded = true;
-    private bool isRunning;
-    private bool isJumping;
-    private float horizontalInput;
-
+    private AnimationState _currentAnimatorState;
+    
+    /// <summary>
+    /// Start is called before the first frame update.
+    /// </summary>
     void Start()
     {
         InitializeComponents();
-        currentAnimState = AnimationState.Idle; // Start in idle state
+        _currentAnimatorState = AnimationState.Idle; // Player always starts in idle state (1st animation state triggered after scene loads)
     }
 
+    /// <summary>
+    /// Function to initialise the basic components needed for the player movement.
+    /// </summary>
     private void InitializeComponents()
     {
-        if (!rb) rb = GetComponent<Rigidbody>();
-        if (!anim) anim = GetComponent<Animator>();
+        if (!_rigidBodyComponent) _rigidBodyComponent = GetComponent<Rigidbody>();
+        if (!_animatorComponent) _animatorComponent = GetComponent<Animator>();
 
-        anim.applyRootMotion = false;
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.linearDamping = 2f;
+        _animatorComponent.applyRootMotion = false; // This prevents the animation from overriding the physics and creating unwanted movement
+        _rigidBodyComponent.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        _rigidBodyComponent.interpolation = RigidbodyInterpolation.Interpolate; // Used for smooth movement
+        _rigidBodyComponent.linearDamping = 2f; // Slows down rigidbody movement over time to give a more realistic approach
 
-        // Initialize safe position FIRST
-        lastSafePosition = transform.position;
-        lastSafePosition.x = 1.075f; // Set initial X to center
+        // Starting with a safe position on ground
+        _lastSafePosition = transform.position;
+        _lastSafePosition.x = 1.075f; // Set initial X to center (since the width of the ground is 2.15f)
 
-        // Set position using lastSafePosition
+        // Set position using _lastSafePosition
         transform.position = new Vector3(
-            lastSafePosition.x,
-            Mathf.Max(1f, lastSafePosition.y),
-            lastSafePosition.z
+            _lastSafePosition.x,
+            Mathf.Max(1f, _lastSafePosition.y),
+            _lastSafePosition.z
         );
 
-        isGrounded = true;
-        isJumping = false;
+        // Setting flags to initial state for player.
+        _isGrounded = true;
+        _isJumping = false;
     }
 
+    /// <summary>
+    /// Function called once per frame.
+    /// </summary>
     void Update()
     {
         HandleInput();
@@ -111,133 +137,148 @@ public class PlayerMovement : MonoBehaviour
         HandleAnimations();
     }
 
+    /// <summary>
+    /// Function is usually called at certain fixed intervals.
+    /// </summary>
     void FixedUpdate()
     {
         HandleMovement();
         HandleVisualLean();
     }
 
+    
+    /// <summary>
+    /// Function for movement. W key is for running forward, A and D are for left and right movement.
+    /// Space is used for jumping.
+    /// </summary>
     private void HandleInput()
     {
-        isRunning = Input.GetKey(KeyCode.W);
-        horizontalInput = Input.GetAxisRaw("Horizontal");
+        _isRunning = Input.GetKey(KeyCode.W);
+        _horizontalInput = Input.GetAxisRaw("Horizontal");
 
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
+        if (Input.GetKeyDown(KeyCode.Space) && _isGrounded && !_isJumping)
         {
             Jump();
         }
     }
 
+    /// <summary>
+    /// Checks if the position of the player _feetOfPlayer is touching the ground object.
+    /// </summary>
     private void SimpleGroundCheck()
     {
-        Vector3 rayStart = feet ? feet.position : transform.position;
-        bool wasGrounded = isGrounded;
-        isGrounded = Physics.Raycast(rayStart, Vector3.down, groundCheckDistance, groundMask);
+        Vector3 rayStart = _feetOfPlayer ? _feetOfPlayer.position : transform.position;
+        bool wasGrounded = _isGrounded;
+        _isGrounded = Physics.Raycast(rayStart, Vector3.down, _groundCheckDistance, _groundMask);
 
-        if (!wasGrounded && isGrounded && isJumping)
+        if (!wasGrounded && _isGrounded && _isJumping)
         {
-            isJumping = false;
-            if (debugMovement) Debug.Log("LANDED - Jump cleared", this);
+            _isJumping = false;
+            if (_movementDebugger) Debug.Log("LANDED - Jump cleared", this);
         }
 
-        if (isGrounded && transform.position.y >= 0f)
+        // Used to reset the position.
+        if (_isGrounded && transform.position.y >= 0f)
         {
-            lastSafePosition = transform.position;
-            lastSafePosition.x = 1.075f; // Center X position
+            _lastSafePosition = transform.position;
+            _lastSafePosition.x = 1.075f; 
         }
     }
 
+    /// <summary>
+    /// Function used to handle the velocity and movement with physical force.
+    /// </summary>
     private void HandleMovement()
     {
-        Vector3 velocity = rb.linearVelocity;
+        Vector3 velocity = _rigidBodyComponent.linearVelocity;
 
         // Forward movement
-        if (isRunning && isGrounded)
+        if (_isRunning && _isGrounded)
         {
             velocity.z = runSpeed;
         }
-        else if (isGrounded && !isJumping)
+        else if (_isGrounded && !_isJumping)
         {
-            velocity.z = Mathf.Lerp(velocity.z, 0f, 10f * Time.fixedDeltaTime);
+            velocity.z = Mathf.Lerp(velocity.z, 0f, 10f * Time.fixedDeltaTime); // Used to slow down the player when the W key is not pressed.
         }
 
-        // Side movement
-        if (isGrounded || isJumping)
+        // Checking ground state and then applying force sideways to generate velocity.
+        if (_isGrounded || _isJumping)
         {
-            velocity.x = horizontalInput * sideSpeed;
+            velocity.x = _horizontalInput * sideSpeed;
         }
-
-        rb.linearVelocity = velocity;
+        _rigidBodyComponent.linearVelocity = velocity;
     }
 
+    /// <summary>
+    /// Handles the animation states of the player.
+    /// </summary>
     private void HandleAnimations()
     {
-        if (!anim) return;
+        if (!_animatorComponent) return; // Simple null check
 
-        // Handle respawning sequence
-        if (isRespawning)
+        if (_isRespawning)
         {
-            // Player is already teleported and ready - just waiting for animation to finish
+            // If already respawning animation is playing, do not change the state until animation is done.
             return;
         }
 
-        // Handle death/respawn first
+        // Handle death and respawn sequence - If player falls below a certain height, then trigger a series of events.
         if (transform.position.y < -5f)
         {
-            if (currentAnimState != AnimationState.Falling)
+            if (_currentAnimatorState != AnimationState.Falling)
             {
-                currentAnimState = AnimationState.Falling;
-                anim.Play("Falling - Crypto");
+                _currentAnimatorState = AnimationState.Falling;
+                _animatorComponent.Play("Falling - Crypto");
             }
 
-            if (transform.position.y < -8f && !isRespawning)
+            if (transform.position.y < -8f && !_isRespawning)
             {
-                // Immediately teleport player to safe position
-                transform.position = lastSafePosition;
-                rb.linearVelocity = Vector3.zero; // Reset velocity
-                isGrounded = true;
-                isJumping = false;
+                // Teleport the player to the last safe position immediately.
+                transform.position = _lastSafePosition;
+                _rigidBodyComponent.linearVelocity = Vector3.zero; // The velocity is reset to zero
+                _isGrounded = true;
+                _isJumping = false;
 
-                // Set to idle state and animation
-                currentAnimState = AnimationState.Idle;
-                anim.Play("Idle 2 - Crypto", 0, 0f);
+                // Play the 2nd idle animation (Default Idle as Idle 1 is only triggered once)
+                _currentAnimatorState = AnimationState.Idle;
+                _animatorComponent.Play("Idle 2 - Crypto", 0, 0f);
 
-                // Start respawning sequence
-                isRespawning = true;
+                // Respawning sequence triggered
+                _isRespawning = true;
 
-                // Trigger respawning animation
-                if (respawnAnimator != null)
+                // Trigger the respawn animation screen
+                if (_respawnAnimator != null)
                 {
-                    respawnAnimator.Play("Respawning", 0, 0f);
+                    _respawnAnimator.Play("Respawning", 0, 0f);
                 }
 
-                // Start timer to reset respawn state
-                StartCoroutine(EndRespawn(respawnAnimationLength));
+                // Start the timer to reset respawn state back to normal
+                StartCoroutine(EndRespawn(_respawnAnimationLength));
                 return;
             }
-
             return;
         }
 
 
-        // Handle normal animation states
-        AnimationState targetState = currentAnimState;
+        // This part of the code is responsible for checking and updating the animation states
+        AnimationState targetState = _currentAnimatorState;
 
-        if (isJumping)
+        if (_isJumping)
         {
             targetState = AnimationState.Jumping;
         }
-        else if (isGrounded)
+        else if (_isGrounded)
         {
-            if (isRunning)
+            if (_isRunning)
             {
                 targetState = AnimationState.Running;
             }
-            else if (horizontalInput < -0.1f)
+            else if (_horizontalInput < -0.1f)
             {
                 targetState = AnimationState.Left;
             }
-            else if (horizontalInput > 0.1f)
+            else if (_horizontalInput > 0.1f)
             {
                 targetState = AnimationState.Right;
             }
@@ -246,82 +287,101 @@ public class PlayerMovement : MonoBehaviour
                 targetState = AnimationState.Idle;
             }
         }
-        // Maintain current state if in air but not jumping (shouldn't happen normally)
-
-        // Only change animation if state changed
-        if (targetState != currentAnimState)
+        // Change the animation to the target state if the current animation is not the target one
+        if (targetState != _currentAnimatorState)
         {
-            currentAnimState = targetState;
-            PlayAnimationForState(currentAnimState);
+            _currentAnimatorState = targetState;
+            PlayAnimationForState(_currentAnimatorState);
         }
     }
-
+    
+    /// <summary>
+    /// This function is used to finish the respawn sequence with a delay to give time for the animation to trigger.
+    /// </summary>
+    /// <param name="delay">Amount of time</param>
+    /// <returns>Returns the respawning flag</returns>
     private IEnumerator EndRespawn(float delay)
     {
         yield return new WaitForSeconds(delay);
-        isRespawning = false;
+        _isRespawning = false;
     }
 
+    /// <summary>
+    /// Animation based on the current state. 
+    /// </summary>
+    /// <param name="state">Animation States</param>
     private void PlayAnimationForState(AnimationState state)
     {
         switch (state)
         {
             case AnimationState.Idle:
-                anim.Play("Idle 2 - Crypto");
+                _animatorComponent.Play("Idle 2 - Crypto");
                 break;
             case AnimationState.Running:
-                anim.Play("Running - Crypto");
+                _animatorComponent.Play("Running - Crypto");
                 break;
             case AnimationState.Left:
-                anim.Play("Left - Crypto");
+                _animatorComponent.Play("Left - Crypto");
                 break;
             case AnimationState.Right:
-                anim.Play("Right - Crypto");
+                _animatorComponent.Play("Right - Crypto");
                 break;
             case AnimationState.Jumping:
-                anim.Play("Jump - Crypto");
+                _animatorComponent.Play("Jump - Crypto");
                 break;
             case AnimationState.Falling:
-                anim.Play("Falling - Crypto");
+                _animatorComponent.Play("Falling - Crypto");
                 break;
         }
     }
 
+    /// <summary>
+    /// Function to handle the visual lean and rotation of the player model based on the horizontal side input.
+    /// </summary>
     private void HandleVisualLean()
     {
-        if (playerModel == null) return;
+        if (_playerModel == null) return;
 
         float targetLean = 0f;
-        if (isRunning && isGrounded && Mathf.Abs(horizontalInput) > 0.1f)
+        if (_isRunning && _isGrounded && Mathf.Abs(_horizontalInput) > 0.1f)
         {
-            targetLean = -horizontalInput * leanAngle;
+            targetLean = -_horizontalInput * _angleOfLean;
         }
 
         Quaternion targetRotation = Quaternion.Euler(0, 0, targetLean);
-        playerModel.localRotation =
-            Quaternion.Slerp(playerModel.localRotation, targetRotation, leanSpeed * Time.fixedDeltaTime);
+        
+        // Spherically linear interpolation to transition the rotation smoothly
+        _playerModel.localRotation =
+            Quaternion.Slerp(_playerModel.localRotation, targetRotation, _speedOfLean * Time.fixedDeltaTime);
     }
 
+    /// <summary>
+    /// The function to handle the jump action of the player.
+    /// </summary>
     private void Jump()
     {
-        isJumping = true;
-        currentAnimState = AnimationState.Jumping;
+        _isJumping = true;
+        _currentAnimatorState = AnimationState.Jumping;
 
-        Vector3 jumpVelocity = rb.linearVelocity;
-        jumpVelocity.y = jumpForce;
+        Vector3 jumpVelocity = _rigidBodyComponent.linearVelocity;
+        jumpVelocity.y = _jumpForce;
 
-        if (isRunning)
+        if (_isRunning)
         {
-            jumpVelocity.z += jumpForwardBoost;
+            jumpVelocity.z += _jumpForwardBoost;
         }
 
-        rb.linearVelocity = jumpVelocity;
+        _rigidBodyComponent.linearVelocity = jumpVelocity;
 
-        if (debugMovement)
+        if (_movementDebugger)
         {
-            Debug.Log($"JUMPED: Running={isRunning}", this);
+            Debug.Log($"JUMPED: Running={_isRunning}", this);
         }
     }
 
+    /// <summary>
+    /// Getter function to get the Z-Axis
+    /// </summary>
+    /// <returns>Position of Z Axis</returns>
     public float ReturnZAxis() => transform.position.z;
 }

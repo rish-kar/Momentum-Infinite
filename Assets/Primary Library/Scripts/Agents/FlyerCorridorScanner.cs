@@ -26,7 +26,7 @@ public class FlyerCorridorScanner : MonoBehaviour
     [Header("Ground Settings")]
     [SerializeField] private float tileLength = 10f;          // Z‑size of each ground tile
     [SerializeField] private float tileWidth  = 2.15f;        // total road width we scan
-    [SerializeField] private LayerMask obstacleMask;
+    [SerializeField] public LayerMask obstacleMask;
 
     [Header("Player Clearance Requirements")]
     [SerializeField] private float minClearanceWidth = 1.5f;  // needed gap across X
@@ -47,6 +47,8 @@ public class FlyerCorridorScanner : MonoBehaviour
 
     public void SetAutoRemove(bool on) => autoRemoveBlockers = on;
 
+    public LayerMask ObstacleMask => obstacleMask;
+    public float TileLength => tileLength;
 
 
     // -------------------------------------------------------------------------

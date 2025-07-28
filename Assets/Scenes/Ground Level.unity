@@ -1452,7 +1452,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0.12554169, y: 0.075842}
-  m_AnchoredPosition: {x: 3.5, y: 70.41681}
+  m_AnchoredPosition: {x: 3.5, y: 70.41687}
   m_SizeDelta: {x: -20.686401, y: -15.475586}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &618458680
@@ -2729,6 +2729,17 @@ MonoBehaviour:
   player: {fileID: 1076822218}
   lookAhead: 300
   extraSpeed: 400
+  stuckSeconds: 1
+  zTeleportStep: 2
+  teleportCooldown: 2
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 256
+  tileLength: 10
+  tileWidth: 2.15
+  minClearanceWidth: 1.5
+  raycastSpacing: 0.5
+  rayHeightOffset: 1
 --- !u!195 &920161670
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -3066,6 +3077,12 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1013563621}
   m_CullTransparentMesh: 1
+--- !u!4 &1015499594 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4425252173966862258, guid: b146830ee05c660449fe32c8c55a42b5,
+    type: 3}
+  m_PrefabInstance: {fileID: 1496198075}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1051083096
 GameObject:
   m_ObjectHideFlags: 0
@@ -3174,21 +3191,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   runSpeed: 76
   sideSpeed: 5
-  jumpForce: 15
-  jumpForwardBoost: 30
-  leanAngle: 15
-  leanSpeed: 8
-  playerModel: {fileID: 1076822218}
-  rb: {fileID: 1076822222}
-  anim: {fileID: 1076822224}
-  feet: {fileID: 1616032160}
-  groundMask:
+  _jumpForce: 15
+  _jumpForwardBoost: 4
+  _angleOfLean: 15
+  _speedOfLean: 8
+  _playerModel: {fileID: 1076822218}
+  _rigidBodyComponent: {fileID: 1076822222}
+  _animatorComponent: {fileID: 1076822224}
+  _feetOfPlayer: {fileID: 1015499594}
+  _groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  groundCheckDistance: 0.3
-  debugMovement: 0
-  respawnAnimator: {fileID: 806949840}
-  respawnAnimationLength: 3
+  _groundCheckDistance: 0.3
+  _movementDebugger: 0
+  _respawnAnimator: {fileID: 806949840}
+  _respawnAnimationLength: 3
 --- !u!114 &1076822221
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4587,7 +4604,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0.12554169, y: 0.075842}
-  m_AnchoredPosition: {x: 3.5, y: 137.33365}
+  m_AnchoredPosition: {x: 3.5, y: 137.33374}
   m_SizeDelta: {x: -20.686401, y: -15.475586}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1336420297
@@ -5026,12 +5043,6 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
   m_IsOn: 1
---- !u!4 &1616032160 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8739090428522079082, guid: b146830ee05c660449fe32c8c55a42b5,
-    type: 3}
-  m_PrefabInstance: {fileID: 1496198075}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1624621691
 GameObject:
   m_ObjectHideFlags: 0
@@ -6184,6 +6195,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2007580605}
     m_Modifications:
+    - target: {fileID: 767473131144514425, guid: 191797d706278ae469ba6a35a1eff254,
+        type: 3}
+      propertyPath: autoRemoveBlockers
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 767473131144514425, guid: 191797d706278ae469ba6a35a1eff254,
         type: 3}
       propertyPath: obstacleMask.m_Bits
