@@ -41,6 +41,20 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
 
     /*──────────────────────────────────────────────────────────────────*/
     
+    // Add near other statics
+    static readonly HashSet<string> ForceYNames = new(new[]
+    {
+        "pf_1_1", "pf_1_2", "pf_1_3", "pf_3_2"
+    });
+    const float ForcedY = -0.5673f;
+
+    static bool ShouldForceY(GameObject go)
+    {
+        string n = go.name;
+        const string clone = "(Clone)";
+        if (n.EndsWith(clone)) n = n.Substring(0, n.Length - clone.Length);
+        return ForceYNames.Contains(n.ToLowerInvariant());
+    }
     
     void Awake()
     {
@@ -183,6 +197,11 @@ public class EnvironmentObjectSpawnManager : MonoBehaviour
             {
                 // For ground objects, ensure they sit properly on the ground
                 SnapToGround(inst.transform);
+            }
+            if (ShouldForceY(inst))
+            {
+                var p = inst.transform.position;
+                inst.transform.position = new Vector3(p.x, ForcedY, p.z);
             }
 
             // Attach helper so it self‑despawns when the player passes.
