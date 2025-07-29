@@ -2,42 +2,54 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// Slider in UI to control the forward force attached to the player.
+/// </summary>
 [AddComponentMenu("UI/Player Speed Slider UI")]
 public class PlayerForwardSpeedSlider : MonoBehaviour
 {
-    [Tooltip("The PlayerMovement component to drive.")]
     public PlayerMovement player;
 
-    [Tooltip("The UI Slider that will set runSpeed.")]
+    [Tooltip("UI Slider to control the forward speed of the player.")]
     public Slider slider;
 
-    [Tooltip("Optional: TextMeshProUGUI to display current speed.")]
+    [Tooltip("Text to display current speed.")]
     public TextMeshProUGUI speedText;
 
+    /// <summary>
+    /// Start is called before the first frame of the game begins.
+    /// </summary>
     void Start()
     {
-        // make sure we have references
-        if (player == null)
-            player = FindObjectOfType<PlayerMovement>();
+        if (player == null) player = FindObjectOfType<PlayerMovement>();
 
-        // init slider range & value
+        // Range of speed
         slider.minValue = 0f;
-        slider.maxValue = 1000f;                // adjust to your desired max
-        slider.value    = player.RunSpeed;
+        slider.maxValue = 1000f;
+
+        // Current run speed
+        slider.value = player.RunSpeed;
         slider.onValueChanged.AddListener(OnSliderChanged);
         RefreshLabel(slider.value);
     }
 
-    void OnSliderChanged(float v)
+    /// <summary>
+    /// Triggered when the slider is changed using mouse during the game run.
+    /// </summary>
+    /// <param name="speedValue">Value of Player's Current Speed</param>
+    void OnSliderChanged(float speedValue)
     {
-        // push into your movement script
-        player.RunSpeed = v;                // :contentReference[oaicite:0]{index=0}
-        RefreshLabel(v);
+        player.RunSpeed = speedValue; // Assigning value to the player movement script
+        RefreshLabel(speedValue);
     }
 
-    void RefreshLabel(float v)
+    /// <summary>
+    /// Refreshes the text label which shows the current speed.
+    /// </summary>
+    /// <param name="speedValue">Value of Player's Current Speed</param>
+    void RefreshLabel(float speedValue)
     {
         if (speedText != null)
-            speedText.text = $"{v:0}";
+            speedText.text = $"{speedValue:0}";
     }
 }

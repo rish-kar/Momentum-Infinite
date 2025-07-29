@@ -46,10 +46,10 @@ public static class BlockageReporter
 
             // Environment object spawning details
             spawnPercentage = spawner ? spawner.spawnPercentage / 100f : 0f,
-            xRange = spawner ? spawner.xRange : Vector2.zero,
+            xRange = spawner ? spawner.xAxisRange : Vector2.zero,
             clearHalfWidth = spawner ? spawner.clearHalfWidth : 0f,
-            zJitter = spawner ? spawner.zJitter : 0f,
-            yOffset = spawner ? spawner.yOffset : 0f,
+            zJitter = spawner ? spawner.zAxisJitter : 0f,
+            yOffset = spawner ? spawner.yAxisOffset : 0f,
 
             culprits = culprits,
             hitsDetected = culprits.Count,
