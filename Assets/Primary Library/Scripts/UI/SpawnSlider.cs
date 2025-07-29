@@ -3,41 +3,48 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Binds a UI Slider to the EnvironmentObjectSpawnManager.spawnPercentage.
+/// Slider in UI to control the spawn rate to test the Evaluation mechanism.
 /// </summary>
 public class SpawnSlider : MonoBehaviour
 {
-    [Tooltip("Reference to the Environment Object Spawn Manager in the scene.")]
+    [Tooltip("Reference to Environment Spawn Manager in the main scene")]
     public EnvironmentObjectSpawnManager spawnManager;
+    
+    public Slider slider; // Range is from 1 to 100
 
-    [Tooltip("UI Slider that controls spawnPercentage (0–100).")]
-    public Slider slider;
+    public TextMeshProUGUI valueText; // Text element attached to the slider to display the spawn percentage
 
-    [Tooltip("Optional: Text element to show current slider value.")]
-    public TextMeshProUGUI valueText;
-
+    /// <summary>
+    /// Called before the game starts and first frame is executed.
+    /// </summary>
     void Start()
     {
-        // Initialize slider range and start value
         slider.minValue = 0f;
         slider.maxValue = 100f;
-        slider.value = spawnManager.spawnPercentage;  // :contentReference[oaicite:0]{index=0}
-
-        // Listen for changes
+        slider.value = spawnManager.spawnPercentage;  // References value from the EnvironmentObjectSpawnManager script
+        
+        // Triggering of event handler in case of a change
         slider.onValueChanged.AddListener(OnSliderChanged);
-        UpdateLabel(slider.value);
+        UpdateSpawnLabel(slider.value);
     }
 
-    void OnSliderChanged(float newValue)
+    /// <summary>
+    /// Event handler for slider value changed.
+    /// </summary>
+    /// <param name="spawningNewValue"></param>
+    void OnSliderChanged(float spawningNewValue)
     {
-        // Apply to your spawner
-        spawnManager.spawnPercentage = newValue;      // :contentReference[oaicite:1]{index=1}
-        UpdateLabel(newValue);
+        spawnManager.spawnPercentage = spawningNewValue;     // Reverse assign this value to reflect the EnvironmentObjectSpawnManager script
+        UpdateSpawnLabel(spawningNewValue);
     }
 
-    void UpdateLabel(float v)
+    /// <summary>
+    /// Update the text label associated with the slider.
+    /// </summary>
+    /// <param name="spawningNewValue"></param>
+    void UpdateSpawnLabel(float spawningNewValue)
     {
         if (valueText != null)
-            valueText.text = $"{v:0}%";
+            valueText.text = $"{spawningNewValue:0}%";
     }
 }
