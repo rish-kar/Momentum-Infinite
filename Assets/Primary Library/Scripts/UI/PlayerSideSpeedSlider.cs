@@ -5,7 +5,7 @@ using TMPro;
 /// <summary>
 /// Update the side speed of the player using the UI Slider using Mouse input during runtime.
 /// </summary>
-[AddComponentMenu("UI/Side‐Force Slider UI")]
+[AddComponentMenu("UI/Side Force Slider UI")]
 public class PlayerSideSpeedSlider : MonoBehaviour
 {
     public PlayerMovement player; // Reference to the PlayerMovement script to control side speed

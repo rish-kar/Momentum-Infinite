@@ -686,8 +686,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2461d2da053403796888eddc279d82d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GameScripts::PdfExporter
-  reportText: {fileID: 1873284064}
-  linesPerPage: 45
+  _reportData: {fileID: 1873284064}
+  _linesAllowedPerPage: 45
 --- !u!114 &678535572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1955,8 +1955,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 757173e5df2945caad3a23d789e2bcfc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GameScripts::BlockageReportDisplay
-  margin: 30
-  txt: {fileID: 0}
+  singleMarginValue: 30
+  textMeshPro: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

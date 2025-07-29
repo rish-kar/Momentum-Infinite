@@ -1,79 +1,88 @@
-// Assets/Scripts/Diagnostics/BlockageReporter.cs
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// One static method the scanner calls; builds a BlockageDetailDTO,
-/// fills it with live game data, stores it in CrashCache.reports.
+/// Script for storing the data in the data transfer object and later using it to export and publish PDF.
 /// </summary>
 public static class BlockageReporter
 {
-    static ProceduralTerrain terrain;
-    static EnvironmentObjectSpawnManager spawner;
+    // Static references to all the other scripts needed
+    static ProceduralTerrain proceduralTerrain;
+    static EnvironmentObjectSpawnManager objectSpawner;
     static SkyboxChanger skyboxChanger;
     static PlayerMovement playerMovement;
-    static Rigidbody playerRb;
+    static Rigidbody playerRigidbody;
 
+    /// <summary>
+    /// Function triggered by agent reporting the problem.
+    /// </summary>
+    /// <param name="tileStartZ">Starting coordinates of Z Axis</param>
+    /// <param name="probeZ">Probe Details on Z Axis</param>
+    /// <param name="culprits">List of Culprits blocking the road</param>
     public static void ReportBlockage(float tileStartZ, float probeZ, List<BlockageDetailDTO.CulpritInfo> culprits)
     {
-        // Ensure CrashCache singleton exists
+        // Ensure CrashCache (singleton because of static references)
         EnsureCrashCacheExists();
 
-        if (!terrain) terrain = Object.FindFirstObjectByType<ProceduralTerrain>();
-        if (!spawner) spawner = Object.FindFirstObjectByType<EnvironmentObjectSpawnManager>();
+        // Check null values and assign using the scripts or components where the values are assigned
+        if (!proceduralTerrain) proceduralTerrain = Object.FindFirstObjectByType<ProceduralTerrain>();
+        if (!objectSpawner) objectSpawner = Object.FindFirstObjectByType<EnvironmentObjectSpawnManager>();
         if (!skyboxChanger) skyboxChanger = Object.FindFirstObjectByType<SkyboxChanger>();
         if (!playerMovement) playerMovement = Object.FindFirstObjectByType<PlayerMovement>();
-        if (playerMovement && !playerRb) playerRb = playerMovement.GetComponent<Rigidbody>();
+        if (playerMovement && !playerRigidbody) playerRigidbody = playerMovement.GetComponent<Rigidbody>();
 
-        var dto = new BlockageDetailDTO
+        var blockageDetailDTO = new BlockageDetailDTO
         {
-            // Global game state
+            // Global states are usually pulled out through library functions operating the game
             sceneName = SceneManager.GetActiveScene().name,
             timestamp = System.DateTime.Now.ToString("o"),
             frame = Time.frameCount,
             timeSinceStart = Time.time,
 
-            // Player position & speed
-            playerPos = playerMovement ? playerMovement.transform.position : Vector3.zero,
+            // Player movement related details
+            playerPosition = playerMovement ? playerMovement.transform.position : Vector3.zero,
             playerSpeed = playerMovement ? playerMovement.CurrentSpeed : 0f,
 
-            // Ground-generation context
+            // Ground generated details
             skyboxVariant = skyboxChanger ? skyboxChanger.CurrentSkyboxIdx : -1,
-            latestGroundZ = terrain ? terrain.LatestGroundZ : 0f,
-            tileLength = terrain ? terrain.groundTileLength : 0f,
+            latestGroundZ = proceduralTerrain ? proceduralTerrain.LatestGroundZ : 0f,
+            tileLength = proceduralTerrain ? proceduralTerrain.groundTileLength : 0f,
 
-            // Environment object spawning details
-            spawnPercentage = spawner ? spawner.spawnPercentage / 100f : 0f,
-            xRange = spawner ? spawner.xAxisRange : Vector2.zero,
-            clearHalfWidth = spawner ? spawner.clearHalfWidth : 0f,
-            zJitter = spawner ? spawner.zAxisJitter : 0f,
-            yOffset = spawner ? spawner.yAxisOffset : 0f,
+            // Parameters from the spawning script
+            spawnPercentage = objectSpawner ? objectSpawner.spawnPercentage / 100f : 0f,
+            xAxisRange = objectSpawner ? objectSpawner.xAxisRange : Vector2.zero,
+            clearHalfWidth = objectSpawner ? objectSpawner.clearHalfWidth : 0f,
+            zAxisJitter = objectSpawner ? objectSpawner.zAxisJitter : 0f,
+            yAxisOffset = objectSpawner ? objectSpawner.yAxisOffset : 0f,
 
             culprits = culprits,
             hitsDetected = culprits.Count,
-            // Corridor-scan specifics (from FlyerCorridorRaycastScanner directly)
+
+            // FlyerCorridor Scanner Details reported
             tileStartZ = tileStartZ,
             probeZ = probeZ,
-            laneHalfWidth = 1.075f, // from (tileWidth / 2), explicitly given as 2.15/2
-            raySpacing = 0.5f, // directly from FlyerCorridorRaycastScanner raycastSpacing
-            maxAllowedHits = 0, // implied from your logic (no hits allowed)
-            // hitsDetected = 1, // implied from blockage logic (since blockage occurred)
+            laneHalfWidth = 1.075f,
+            raycastingGaps = 0.5f,
+            maxAllowedHits = 0,
         };
 
-        CrashCache.reports.Add(dto);
+        CrashCache.reports.Add(blockageDetailDTO);
 
-        // Debug logging
-        Debug.Log($"BlockageReporter: Added report #{CrashCache.reports.Count} for blockage at Z={tileStartZ:F2} in scene '{dto.sceneName}'");
+        // Logs everytime a blockage is detected
+        Debug.Log(
+            $"BlockageReporter: Added report #{CrashCache.reports.Count} for blockage at Z={tileStartZ:F2} in scene '{blockageDetailDTO.sceneName}'");
     }
 
+    /// <summary>
+    /// Checking the crash cache exists (similar to BlockageReportDisplay Script)
+    /// </summary>
     private static void EnsureCrashCacheExists()
     {
         if (Object.FindFirstObjectByType<CrashCache>() == null)
         {
-            var go = new GameObject("CrashCache");
-            go.AddComponent<CrashCache>();
+            var gameObject = new GameObject("CrashCache");
+            gameObject.AddComponent<CrashCache>();
         }
     }
 }

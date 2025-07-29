@@ -3,97 +3,111 @@ using UnityEngine;
 using TMPro;
 using System.Text;
 
-public class BlockageReportDisplay : MonoBehaviour
+/// <summary>
+/// Class with functionality to publish the result in the Exit Report Scene
+/// </summary>
+public class BlockageReportDisplayBlockageReportDisplay : MonoBehaviour
 {
-    [Header("Optional extra margin (px)")]
-    [SerializeField] int margin = 30;
+    [SerializeField] int singleMarginValue = 30;
 
-    [Tooltip("If left empty the component will look for a TextMeshProUGUI on the same GameObject.")]
-    [SerializeField] TextMeshProUGUI txt;
+    [SerializeField] TextMeshProUGUI textMeshPro;
 
+    /// <summary>
+    /// Triggered when the game starts.
+    /// </summary>
     void Awake()
     {
-        if (!txt) txt = GetComponent<TextMeshProUGUI>();
+        // Basic Null Check and assignment
+        if (!textMeshPro) textMeshPro = GetComponent<TextMeshProUGUI>();
 
-        // give the Content object wide margins so nothing is clipped
-        var rt = (RectTransform)transform;
-        rt.offsetMin = new Vector2(margin, -margin); // left /  bottom
-        rt.offsetMax = new Vector2(-margin, margin); // right /  top
+        var transformForUIElement = (RectTransform)transform;
+        transformForUIElement.offsetMin =
+            new Vector2(singleMarginValue, -singleMarginValue); // For Left and Bottom Side
+        transformForUIElement.offsetMax = new Vector2(-singleMarginValue, singleMarginValue); // For Right and Top Side
     }
 
+    /// <summary>
+    /// Start is triggered before the first frame of the game begins.
+    /// </summary>
     void Start()
     {
-        if (!txt) txt = GetComponent<TextMeshProUGUI>();
+        // Null check
+        if (!textMeshPro) textMeshPro = GetComponent<TextMeshProUGUI>();
         EnsureCrashCacheExists();
 
-        var sb = new StringBuilder(4096);
+        var stringBuilder = new StringBuilder(4096); // Mutatable Object to prevent multiple object creation
 
-        /* ── LEGEND ─────────────────────────────────────────── */
-        sb.AppendLine("<size=32><b>LEGEND</b></size>\n");
-        sb.AppendLine("<b>Scene</b>: Level name at time of blockage.");
-        sb.AppendLine("<b>Timestamp</b>: Local time in ISO format.");
-        sb.AppendLine("<b>Frame</b>: Time.frameCount when blockage occurred.");
-        sb.AppendLine("<b>Player Pos / Speed</b>: Position and forward velocity.");
-        sb.AppendLine("<b>Skybox Variant</b>: Index used by SkyboxChanger.");
-        sb.AppendLine("<b>Spawn %</b>: Probability of obstacle generation.");
-        sb.AppendLine("<b>Tile Z</b>: Position of current ground tile.");
-        sb.AppendLine("<b>Lane</b>: Width of safe corridor.");
-        sb.AppendLine("<b>Ray Spacing</b>: Distance between horizontal probes.");
-        sb.AppendLine("<b>Culprits</b>: Prefabs detected in blocked corridor.");
-        sb.AppendLine("<line-height=60%>───────────────────────────────────────────────</line-height>\n");
+        // Legend : Understanding the parameters published
+        stringBuilder.AppendLine("<size=32><b>LEGEND</b></size>\n");
+        stringBuilder.AppendLine("<b>Scene</b>: Level name at time of blockage.");
+        stringBuilder.AppendLine("<b>Timestamp</b>: Local time in ISO format.");
+        stringBuilder.AppendLine("<b>Frame</b>: Time.frameCount when blockage occurred.");
+        stringBuilder.AppendLine("<b>Player Pos / Speed</b>: Position and forward velocity.");
+        stringBuilder.AppendLine("<b>Skybox Variant</b>: Index used by SkyboxChanger.");
+        stringBuilder.AppendLine("<b>Spawn %</b>: Probability of obstacle generation.");
+        stringBuilder.AppendLine("<b>Tile Z</b>: Position of current ground tile.");
+        stringBuilder.AppendLine("<b>Lane</b>: Width of safe corridor.");
+        stringBuilder.AppendLine("<b>Ray Spacing</b>: Spacing or distance between horizontal probes.");
+        stringBuilder.AppendLine("<b>Culprits</b>: Details of Prefabs detected in blocked corridor.");
+        stringBuilder.AppendLine("<line-height=60%>───────────────────────────────────────────────</line-height>\n");
 
-        /* ── REPORT ENTRIES ─────────────────────────────────── */
+        // This block triggered indicates that the blockages are not detected yet.
         if (CrashCache.reports.Count == 0)
         {
-            sb.AppendLine("<size=24><color=yellow><b>No blockage reports found.</b></color></size>");
-            sb.AppendLine("This could mean:");
-            sb.AppendLine("• No blockages occurred during gameplay");
-            sb.AppendLine("• Reports were not properly saved");
-            sb.AppendLine("• Scene transition cleared the data");
+            stringBuilder.AppendLine("<size=24><color=yellow><b>No blockage reports found.</b></color></size>");
+            stringBuilder.AppendLine("This could mean:");
+            stringBuilder.AppendLine("1. No blockages occurred during gameplay");
+            stringBuilder.AppendLine("2. The is a problem with the saving mechanism of crash details");
+            stringBuilder.AppendLine("3. Scene transition cleared the data due to automatic cache wipe-out");
         }
         else
         {
-            foreach (var r in CrashCache.reports)
+            foreach (var singleReport in CrashCache.reports)
             {
-                sb.AppendLine($"<size=28><b>• Blockage @ Z={r.tileStartZ:F2}</b></size>");
-                sb.AppendLine($"<b>Scene</b>: {r.sceneName}    <b>Time</b>: {r.timestamp}");
-                sb.AppendLine($"<b>Frame</b>: {r.frame}    <b>t</b>: {r.timeSinceStart:F2}s");
-                sb.AppendLine($"<b>Player</b>: {r.playerPos:F2}");
-                sb.AppendLine($"<b>Speed</b>: {r.playerSpeed:F2} m/s");
-                sb.AppendLine($"<b>Skybox</b>: {r.skyboxVariant}");
-                sb.AppendLine($"<b>Latest Ground Z</b>: {r.latestGroundZ:F1}");
-                sb.AppendLine($"<b>TileLen</b>: {r.tileLength}");
-                sb.AppendLine($"<b>Spawn Percentage</b>: {r.spawnPercentage:P0}");
-                sb.AppendLine($"<b>Blocked Z</b>: {r.probeZ:F2}");
-                sb.AppendLine($"<b>Lane </b>: {r.laneHalfWidth}");
-                sb.AppendLine($"<b>Ray Spacing</b>: {r.raySpacing}");
+                stringBuilder.AppendLine($"<size=28><b>• Blockage @ Z={singleReport.tileStartZ:F2}</b></size>");
+                stringBuilder.AppendLine(
+                    $"<b>Scene</b>: {singleReport.sceneName}    <b>Time</b>: {singleReport.timestamp}");
+                stringBuilder.AppendLine(
+                    $"<b>Frame</b>: {singleReport.frame}    <b>t</b>: {singleReport.timeSinceStart:F2}s");
+                stringBuilder.AppendLine($"<b>Player</b>: {singleReport.playerPosition:F2}");
+                stringBuilder.AppendLine($"<b>Speed</b>: {singleReport.playerSpeed:F2} m/s");
+                stringBuilder.AppendLine($"<b>Skybox</b>: {singleReport.skyboxVariant}");
+                stringBuilder.AppendLine($"<b>Latest Ground Z</b>: {singleReport.latestGroundZ:F1}");
+                stringBuilder.AppendLine($"<b>TileLen</b>: {singleReport.tileLength}");
+                stringBuilder.AppendLine($"<b>Spawn Percentage</b>: {singleReport.spawnPercentage:P0}");
+                stringBuilder.AppendLine($"<b>Blocked Z</b>: {singleReport.probeZ:F2}");
+                stringBuilder.AppendLine($"<b>Lane </b>: {singleReport.laneHalfWidth}");
+                stringBuilder.AppendLine($"<b>Ray Spacing</b>: {singleReport.raycastingGaps}");
 
-                if (r.culprits.Count > 0)
+                if (singleReport.culprits.Count > 0)
                 {
                     var printed = new HashSet<string>();
-                    sb.AppendLine("<b>Culprits:</b>");
-                    foreach (var c in r.culprits)
+                    stringBuilder.AppendLine("<b>Culprits:</b>");
+                    foreach (var c in singleReport.culprits)
                     {
                         string key = $"{c.name}@{c.position}";
                         if (printed.Add(key))
-                            sb.AppendLine($"  • <b>{c.name}</b>  [{c.layer}]  size: {c.size:F2}  pos: {c.position:F2}");
+                            stringBuilder.AppendLine(
+                                $"  • <b>{c.name}</b>  [{c.layer}]  size: {c.size:F2}  pos: {c.position:F2}");
                     }
                 }
-
-                sb.AppendLine("<line-height=50%>───────────────────────────────────────────────</line-height>\n");
+                stringBuilder.AppendLine(
+                    "<line-height=50%>───────────────────────────────────────────────</line-height>\n");
             }
         }
 
-        txt.text = sb.ToString();
+        textMeshPro.text = stringBuilder.ToString();
     }
 
-    /* -------------------------------------------------------- */
+    /// <summary>
+    /// Verify that the Crash Cache object exists and if not, then initialise it.
+    /// </summary>
     private void EnsureCrashCacheExists()
     {
         if (FindFirstObjectByType<CrashCache>() == null)
         {
-            var go = new GameObject("CrashCache");
-            go.AddComponent<CrashCache>();
+            var gameObject = new GameObject("CrashCache");
+            gameObject.AddComponent<CrashCache>();
         }
     }
 }
