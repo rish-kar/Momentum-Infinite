@@ -3,173 +3,200 @@ using UnityEngine.Video;
 using System.Collections;
 using System.Collections.Generic;
 
+/// <summary>
+/// Skybox Changer script will change the skybox according to the distance travelled by the player.
+/// It will also play the video associated with the skybox which are defined in the inspector.
+/// </summary>
 public class SkyboxChanger : MonoBehaviour
 {
-    /* ── Inspector ───────────────────────────────────────────── */
-    [Header("References")] public Transform player;
+    [Header("References to External Fields")]
+    public Transform playerTransform;
+
     [SerializeField] VideoPlayer videoPlayer;
 
     [Header("Distances")] public int distanceInterval = 2000;
-    public float transitionDuration = 13.0f;
+    public float durationOfTransition = 13.0f;
 
-    [Header("Assets")] 
-    [SerializeField] List<Material> skyboxes = new();
-    [SerializeField] List<VideoClip> videoClips = new();
-    public int CurrentSkyboxIdx { get; private set; }
+    [Header("Assets")] [SerializeField]
+    List<Material> listOfSkyboxes = new(); // A list that will contain all the skyboxes
 
-    /* ── Private State ───────────────────────────────────────── */
-    readonly Stack<int> used = new();
-    private int nextSwapZ;
-    private bool isTransitioning;
-    private Material currentSkyboxInstance;
-    private Material nextSkyboxInstance;
-    private Coroutine transitionRoutine;
-    private float defaultExposure = 1.0f;
+    [SerializeField]
+    List<VideoClip> listOfVideoClips = new(); // A list that will hold all the videoclips to be used as skyboxes
 
+    public int CurrentSkyboxIdx { get; private set; } // Getter and Setter
+
+    readonly Stack<int> usedSkyboxes = new(); // List of used skyboxes to avoid repetition
+    private int _nextSwapZAxis; // Next Z axis position where the skybox needs o be changed
+    private bool _isTransitioning; // Currently checks if in transitioning state
+    private Material _currentSkyboxInstance; // Current skybox material instance
+    private Material _nextSkyboxInstance; // Next skybox material instance to be used during transition
+    private Coroutine _transition; // Coroutine for handling the transition
+    private float _defaultExposure = 1.0f;
+
+
+    /// <summary>
+    /// Awake is called at the beginning of the game.
+    /// </summary>
     void Awake()
     {
-        if (skyboxes.Count != videoClips.Count || skyboxes.Count == 0)
+        if (listOfSkyboxes.Count != listOfVideoClips.Count || listOfSkyboxes.Count == 0)
         {
             enabled = false;
             return;
         }
 
-        int i0 = Random.Range(0, skyboxes.Count);
-        InitializeEnvironment(i0);
-        used.Push(i0);
-        nextSwapZ = distanceInterval;
+        int randomIndex = Random.Range(0, listOfSkyboxes.Count);
+        InitialiseEnvironment(randomIndex);
+        usedSkyboxes.Push(randomIndex); // Using a stacking mechanism to avoid repetition of skyboxes
+        _nextSwapZAxis = distanceInterval;
     }
 
-    void InitializeEnvironment(int index)
+    /// <summary>
+    /// Create a new instance and initialise the environment with the given index.
+    /// </summary>
+    /// <param name="index">Skybox Index</param>
+    void InitialiseEnvironment(int index)
     {
-        // Create new material instance (critical fix)
-        currentSkyboxInstance = new Material(skyboxes[index]);
-        RenderSettings.skybox = currentSkyboxInstance;
-        
-        // Store default exposure
-        if (currentSkyboxInstance.HasProperty("_Exposure"))
+        _currentSkyboxInstance = new Material(listOfSkyboxes[index]); // Create a material instance on the fly 
+        RenderSettings.skybox = _currentSkyboxInstance; // Switch the render settings to the current skybox instance
+
+        if (_currentSkyboxInstance.HasProperty("_Exposure"))
         {
-            defaultExposure = currentSkyboxInstance.GetFloat("_Exposure");
+            _defaultExposure = _currentSkyboxInstance.GetFloat("_Exposure"); // Fade Transition effect
         }
-        
-        videoPlayer.clip = videoClips[index];
-        videoPlayer.Play();
-        DynamicGI.UpdateEnvironment();
-        CurrentSkyboxIdx = index;
+
+        videoPlayer.clip = listOfVideoClips[index];
+        videoPlayer.Play(); // Plays the matching video clip for the skybox
+        DynamicGI.UpdateEnvironment(); // Update the lighting environment
+        CurrentSkyboxIdx = index; // Switch the index
     }
 
+    /// <summary>
+    /// Called once per frame.
+    /// </summary>
     void Update()
     {
-        if (!player || isTransitioning) return;
+        if (!playerTransform || _isTransitioning) return;
 
-        if (player.position.z >= nextSwapZ)
+        // Pick new skybox when the plyaer reaches the Z axis position for the change
+        if (playerTransform.position.z >= _nextSwapZAxis)
         {
-            nextSwapZ += distanceInterval;
+            _nextSwapZAxis += distanceInterval;
             int nextIndex = PickNextIndex();
-            
-            if (transitionRoutine != null) 
-                StopCoroutine(transitionRoutine);
-                
-            transitionRoutine = StartCoroutine(TransitionRoutine(nextIndex));
+
+            if (_transition != null)
+                StopCoroutine(_transition);
+
+            _transition = StartCoroutine(TransitionRoutine(nextIndex));
         }
     }
 
+    /// <summary>
+    /// Function responsible for picking the next index of the skybox to be used in the game.
+    /// </summary>
+    /// <returns></returns>
     int PickNextIndex()
     {
-        if (used.Count == skyboxes.Count) used.Clear();
+        if (usedSkyboxes.Count == listOfSkyboxes.Count) usedSkyboxes.Clear();
 
-        List<int> pool = new();
-        for (int i = 0; i < skyboxes.Count; i++)
-            if (!used.Contains(i))
-                pool.Add(i);
+        List<int> skyboxPool = new(); // Create a pool of available skyboxes
+        for (int i = 0; i < listOfSkyboxes.Count; i++)
+            if (!usedSkyboxes.Contains(i))
+                skyboxPool.Add(i);
 
-        int choice = pool[Random.Range(0, pool.Count)];
-        used.Push(choice);
-        return choice;
+        int skyboxChoice = skyboxPool[Random.Range(0, skyboxPool.Count)]; // Select randomly from the pool
+        usedSkyboxes.Push(skyboxChoice);
+        return skyboxChoice;
     }
 
+    /// <summary>
+    /// The Transition Routine deals with handling the transition between skyboxes.
+    /// </summary>
+    /// <param name="nextIndex">Next Skybox Index</param>
+    /// <returns>Wait null object</returns>
     IEnumerator TransitionRoutine(int nextIndex)
     {
-        isTransitioning = true;
-        
-        // Create next material instance in advance
-        nextSkyboxInstance = new Material(skyboxes[nextIndex]);
-        float nextExposure = defaultExposure;
-        if (nextSkyboxInstance.HasProperty("_Exposure"))
+        _isTransitioning = true; // Flag to prevent intrupt while transitioning
+
+        // Create next material instance in advance for smoother transition
+        _nextSkyboxInstance = new Material(listOfSkyboxes[nextIndex]);
+        float nextSkyboxExposure = _defaultExposure;
+        if (_nextSkyboxInstance.HasProperty("_Exposure"))
         {
-            nextExposure = nextSkyboxInstance.GetFloat("_Exposure");
+            nextSkyboxExposure = _nextSkyboxInstance.GetFloat("_Exposure");
         }
-        
-        // Phase 1: Fade out current environment
-        float fadeOutTime = transitionDuration * 0.5f;
+
+        float fadeOutTransitionTime =
+            durationOfTransition * 0.5f; // Sets fade out duration to half the total transition time
         float timer = 0f;
-        
-        while (timer < fadeOutTime)
+        while (timer < fadeOutTransitionTime)
         {
             timer += Time.deltaTime;
-            float t = Mathf.Clamp01(timer / fadeOutTime);
-            
-            // Fade skybox exposure
-            if (currentSkyboxInstance.HasProperty("_Exposure"))
+            float exposureTimer = Mathf.Clamp01(timer / fadeOutTransitionTime);
+
+            // Reduces skybox exposure to black for the new skybox to load
+            if (_currentSkyboxInstance.HasProperty("_Exposure"))
             {
-                currentSkyboxInstance.SetFloat("_Exposure", Mathf.Lerp(defaultExposure, 0f, t));
+                _currentSkyboxInstance.SetFloat("_Exposure", Mathf.Lerp(_defaultExposure, 0f, exposureTimer));
             }
-            
-            DynamicGI.UpdateEnvironment();
+
+            DynamicGI.UpdateEnvironment(); // Updates lighting system
             yield return null;
         }
-        
-        // Ensure fully black
-        if (currentSkyboxInstance.HasProperty("_Exposure")) 
-            currentSkyboxInstance.SetFloat("_Exposure", 0f);
-        
-        // Phase 2: Swap environment
-        RenderSettings.skybox = nextSkyboxInstance;
-        currentSkyboxInstance = nextSkyboxInstance;
-        videoPlayer.clip = videoClips[nextIndex];
+
+        // Condition to ensure that the exposure is zero and the skybox is completely black before switching
+        if (_currentSkyboxInstance.HasProperty("_Exposure"))
+            _currentSkyboxInstance.SetFloat("_Exposure", 0f);
+
+        // Render new material update
+        RenderSettings.skybox = _nextSkyboxInstance;
+        _currentSkyboxInstance = _nextSkyboxInstance;
+        videoPlayer.clip = listOfVideoClips[nextIndex];
         videoPlayer.Play();
-        used.Push(nextIndex);
+        usedSkyboxes.Push(nextIndex);
         CurrentSkyboxIdx = nextIndex;
         DynamicGI.UpdateEnvironment();
-        
-        // Set initial black state
-        if (currentSkyboxInstance.HasProperty("_Exposure"))
-            currentSkyboxInstance.SetFloat("_Exposure", 0f);
-        
-        // Phase 3: Fade in new environment
-        float fadeInTime = transitionDuration * 0.5f;
+
+        // Condition to ensure that the exposure is zero and the skybox is completely black before switching
+        if (_currentSkyboxInstance.HasProperty("_Exposure"))
+            _currentSkyboxInstance.SetFloat("_Exposure", 0f);
+
+        // Reset timer during second half of the transition
+        float fadeInTime = durationOfTransition * 0.5f;
         timer = 0f;
-        
+
         while (timer < fadeInTime)
         {
             timer += Time.deltaTime;
-            float t = Mathf.Clamp01(timer / fadeInTime);
-            
-            // Fade skybox exposure
-            if (currentSkyboxInstance.HasProperty("_Exposure"))
+            float exposureTimer = Mathf.Clamp01(timer / fadeInTime);
+
+            // Increase expsosure slowly
+            if (_currentSkyboxInstance.HasProperty("_Exposure"))
             {
-                currentSkyboxInstance.SetFloat("_Exposure", Mathf.Lerp(0f, nextExposure, t));
+                _currentSkyboxInstance.SetFloat("_Exposure", Mathf.Lerp(0f, nextSkyboxExposure, exposureTimer));
             }
-            
+
             DynamicGI.UpdateEnvironment();
             yield return null;
         }
-        
-        // Ensure fully visible
-        if (currentSkyboxInstance.HasProperty("_Exposure")) 
-            currentSkyboxInstance.SetFloat("_Exposure", nextExposure);
-        
+
+        // Reach visible exposure of the new skybox
+        if (_currentSkyboxInstance.HasProperty("_Exposure"))
+            _currentSkyboxInstance.SetFloat("_Exposure", nextSkyboxExposure);
+
         DynamicGI.UpdateEnvironment();
-        isTransitioning = false;
+        _isTransitioning = false;
     }
 
+    /// <summary>
+    /// On Destroy is called when the game object is disabled or destroyed.
+    /// </summary>
     void OnDestroy()
     {
-        // Clean up material instances
-        if (currentSkyboxInstance != null) 
-            Destroy(currentSkyboxInstance);
-            
-        if (nextSkyboxInstance != null) 
-            Destroy(nextSkyboxInstance);
+        if (_currentSkyboxInstance != null)
+            Destroy(_currentSkyboxInstance);
+
+        if (_nextSkyboxInstance != null)
+            Destroy(_nextSkyboxInstance);
     }
 }

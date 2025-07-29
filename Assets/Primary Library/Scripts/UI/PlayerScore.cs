@@ -130,10 +130,6 @@ public class PlayerScore : MonoBehaviour
         // Calculate and update score to reflect in the UI
         int playerScore = Mathf.Max(0, (int)player.position.z + _scoreOffset);
         score.text = playerScore.ToString();
-
-        if (_debugScore && Time.frameCount % 60 == 0) // Log once per second only if debug is enabled
-        {
-            Debug.Log($"Score: {playerScore} (Player Z: {player.position.z:F2})", this);
-        }
+        
     }
 }

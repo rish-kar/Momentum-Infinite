@@ -309,8 +309,8 @@ MonoBehaviour:
   _previousGround: {fileID: 2684501641451910182}
   _groundContainer: {fileID: 1574626338}
   stopSpawningTerrain: 0
-  _minSpawnRate: 0.1
-  _maxSpawnRate: 1
+  _mininimumSpawnRate: 0.1
+  _maximumSpawnRate: 1
   groundTileLength: 96
   _ghostRunnerAgent: {fileID: 0}
   _player: {fileID: 1076822217}
@@ -320,8 +320,8 @@ MonoBehaviour:
   _skyboxChanger: {fileID: 0}
   _debugTerrain: 0
   _debugObjectSpawning: 0
-  navAhead: 600
-  navBack: 50
+  navMeshDistanceAhead: 600
+  navMeshDistanceBehind: 50
 --- !u!1 &58008921
 GameObject:
   m_ObjectHideFlags: 0
@@ -1782,7 +1782,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f95fc7abff3946d8a5bf040babb7442d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentObjectSpawnManager
-  spawnPercentage: 8.4
+  spawnPercentage: 0
   xAxisRange: {x: -7.1, y: 10.55}
   clearHalfWidth: 2
   zAxisJitter: 5
@@ -1844,8 +1844,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 1076822218}
   score: {fileID: 640395743}
-  scoreOffset: 45
-  debugScore: 0
+  _scoreOffset: 45
+  _debugScore: 1
 --- !u!114 &640395743
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3222,8 +3222,8 @@ MonoBehaviour:
   _previousGround: {fileID: 2684501641451910182}
   _groundContainer: {fileID: 1574626338}
   stopSpawningTerrain: 0
-  _minSpawnRate: 0.1
-  _maxSpawnRate: 1
+  _mininimumSpawnRate: 0.1
+  _maximumSpawnRate: 1
   groundTileLength: 96
   _ghostRunnerAgent: {fileID: 920161669}
   _player: {fileID: 1076822217}
@@ -3233,8 +3233,8 @@ MonoBehaviour:
   _skyboxChanger: {fileID: 1219907408}
   _debugTerrain: 0
   _debugObjectSpawning: 0
-  navAhead: 600
-  navBack: 50
+  navMeshDistanceAhead: 600
+  navMeshDistanceBehind: 50
 --- !u!54 &1076822222
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -4205,11 +4205,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92bcf437587244bcb04b9b12b540df0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkyboxChanger
-  player: {fileID: 1076822218}
+  playerTransform: {fileID: 1076822218}
   videoPlayer: {fileID: 1219907407}
   distanceInterval: 1000
-  transitionDuration: 2.5
-  skyboxes:
+  durationOfTransition: 13
+  listOfSkyboxes:
   - {fileID: 2100000, guid: ea50f78baf29a8f4fab9c2aad21c350a, type: 2}
   - {fileID: 2100000, guid: 8531f1a85d203bc4cac00ec445886640, type: 2}
   - {fileID: 2100000, guid: 602793d582768334e96f4b81fdc43582, type: 2}
@@ -4217,14 +4217,14 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 9b34e0e9f5259854e9fba6272a217c09, type: 2}
   - {fileID: 2100000, guid: 0017f06fbe1296541b3b889aed3892ab, type: 2}
   - {fileID: 2100000, guid: 6b1dbe9738c1f2a4da1519e01d204adf, type: 2}
-  videoClips:
+  listOfVideoClips:
   - {fileID: 32900000, guid: f7e1d8d726fa007408b6a40652a939f1, type: 3}
-  - {fileID: 32900000, guid: e383ed5bfb23f90418460ab001fcef06, type: 3}
-  - {fileID: 32900000, guid: 49c1be2896b38754f8ee540cbcd7e12e, type: 3}
-  - {fileID: 32900000, guid: 6cba12d1bda4a3547898250dc1cb82b2, type: 3}
-  - {fileID: 32900000, guid: e018fe14d11698140811db4a3b5a0138, type: 3}
-  - {fileID: 32900000, guid: e365795fd2513234caf4df5b406eecb8, type: 3}
-  - {fileID: 32900000, guid: 49fff2dc4042f3346b437ac222d20421, type: 3}
+  - {fileID: 32900000, guid: cd7f49a6d51533343acc05e94c9173c4, type: 3}
+  - {fileID: 32900000, guid: 763abf7913f95194aa6747011ac34674, type: 3}
+  - {fileID: 32900000, guid: 2e88ffc961af7444795d9047373582fa, type: 3}
+  - {fileID: 32900000, guid: dbab6ad8642a44449a34f2372cc03d82, type: 3}
+  - {fileID: 32900000, guid: 0de48c7247475574690d3f24dc846e9d, type: 3}
+  - {fileID: 32900000, guid: 7078df2371800ee45949f05168e04f72, type: 3}
 --- !u!1 &1236449031
 GameObject:
   m_ObjectHideFlags: 0
