@@ -6312,13 +6312,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b96919888c6643838fa215cc597428a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlyerAgent
-  player: {fileID: 1076822218}
-  terrain: {fileID: 1076822221}
-  height: 14.5
-  lateralOffset: 0
-  forwardOffset: 200
-  smoothTime: 0.8
-  speedBuffer: 5
+  _player: {fileID: 1076822218}
+  _terrain: {fileID: 1076822221}
+  _flyerHeight: 12
+  _lateralOffset: 0
+  _forwardOffset: 200
+  _smoothEffectTime: 0.6
+  _agentSpeedBuffer: 5
 --- !u!64 &2684501641451910176
 MeshCollider:
   m_ObjectHideFlags: 0

@@ -1,66 +1,70 @@
 using UnityEngine;
 
+/// <summary>
+/// Flyer Agent is the controller class for the Flying Agent.
+/// The controller class is responsible for moving the agent across the map and ahead of the player.
+/// This allows complete evaluation to trigger before the player even reaches a certain point.
+/// </summary>
 public class FlyerAgent : MonoBehaviour
 {
-    [Header("References")]
-    [SerializeField] private Transform          player;      // runner
-    [SerializeField] private ProceduralTerrain  terrain;     // terrain script that has LatestGroundZ
+    [Header("Object and Script References")]
+    [SerializeField] private Transform          _player;      // The Player Game Object's position, rotation and scale
+    [SerializeField] private ProceduralTerrain  _terrain;     // The Procedural Terrain Script used to spawn grounds
 
-    [Header("Offsets")]
-    [SerializeField] private float height        = 12f;      // Y altitude
-    [SerializeField] private float lateralOffset = 0f;       // X offset from runner
-    [SerializeField] private float forwardOffset = 200f;     // Z gap ahead of runner
+    [Header("Offsets Variables")]
+    [SerializeField] private float _flyerHeight        = 12f;      // Y altitude of the flying agent
+    [SerializeField] private float _lateralOffset = 0f;       // X offset from player object
+    [SerializeField] private float _forwardOffset = 200f;     // Z gap - Difference between the player and the agent that needs to be maintained
 
-    [Header("Smoothing")]
-    [Tooltip("≈ time to remove 95 % of the gap (sec)")]
-    [SerializeField] private float smoothTime    = 0.6f;
-    [Tooltip("extra head-room above player speed")]
-    [SerializeField] private float speedBuffer   = 5f;       // units/s
+    [Header("Variables for Smoothing Effect")]
+    [SerializeField] private float _smoothEffectTime    = 0.6f;
+    [Tooltip("Extra Space above player speed")]
+    [SerializeField] private float _agentSpeedBuffer   = 5f;       
+    
+    Vector3 agentVelocity;
+    float   lastPlayerZAxis;
 
-    /* ─────  internal  ───── */
-    Vector3 velocity;
-    float   lastPlayerZ;
-
+    /// <summary>
+    /// Triggered when the game starts.
+    /// </summary>
     void Awake()
     {
-        /* ---------- auto-wire ---------- */
-        if (!player)
-            player = GameObject.FindGameObjectWithTag("Player")?.transform;
+        if (!_terrain)
+            _terrain = FindFirstObjectByType<ProceduralTerrain>();
 
-        if (!terrain)
-            terrain = FindFirstObjectByType<ProceduralTerrain>();
-
-        /* ---------- ensure physics won’t drag us down ---------- */
-        if (TryGetComponent(out Rigidbody rb))
-            rb.useGravity = false;
+        if (TryGetComponent(out Rigidbody rigidBody))
+            rigidBody.useGravity = false;   // Do not allow gravity to drag the agent down
     }
 
+    /// <summary>
+    /// Called once per frame.
+    /// </summary>
     void Update()
     {
-        if (!player)   return;
+        // Null check for player
+        if (!_player)   return;
+        
+        float targetZAxis = _player.position.z + _forwardOffset; // Ensures target location is position of player on Z-Axis + offset value (to stay ahead of the player)
 
-        /* ---------- target position ---------- */
-        float targetZ = player.position.z + forwardOffset;
+        
+        if (_terrain) targetZAxis = Mathf.Min(targetZAxis, _terrain.LatestGroundZ);  // Ensures that target is always set to the last spawned ground so that the agent does not fly into empty space
+        
+        Vector3 targetPosition = new(
+            _player.position.x + _lateralOffset,
+            _flyerHeight,
+            targetZAxis);
 
-        // Clamp to LAST spawned tile so we don’t fly into empty space
-        if (terrain) targetZ = Mathf.Min(targetZ, terrain.LatestGroundZ);  // LatestGroundZ added earlier
+        // Adapts the speed according to the speed of the player
+        float playerSpeedZAxis = (_player.position.z - lastPlayerZAxis) / Time.deltaTime;
+        float    maximumAgentSpeed  = Mathf.Abs(playerSpeedZAxis) + _agentSpeedBuffer;
+        lastPlayerZAxis        = _player.position.z;
 
-        Vector3 targetPos = new(
-            player.position.x + lateralOffset,
-            height,
-            targetZ);
-
-        /* ---------- adapt maxSpeed to player’s instant speed ---------- */
-        float playerSpeedZ = (player.position.z - lastPlayerZ) / Time.deltaTime;
-        float maxSpeed     = Mathf.Abs(playerSpeedZ) + speedBuffer;        // follow faster when runner speeds up
-        lastPlayerZ        = player.position.z;
-
-        /* ---------- smooth-damp move ---------- */
+        // Using Smooth Damp for smooth movement
         transform.position = Vector3.SmoothDamp(
             transform.position,
-            targetPos,
-            ref velocity,
-            smoothTime,
-            maxSpeed);
+            targetPosition,
+            ref agentVelocity,
+            _smoothEffectTime,
+            maximumAgentSpeed);
     }
 }
