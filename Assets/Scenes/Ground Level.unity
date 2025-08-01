@@ -512,6 +512,12 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 1492145664793539305}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &100634001 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8739090428522079082, guid: b146830ee05c660449fe32c8c55a42b5,
+    type: 3}
+  m_PrefabInstance: {fileID: 1496198075}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &199600066
 GameObject:
   m_ObjectHideFlags: 0
@@ -3077,12 +3083,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1013563621}
   m_CullTransparentMesh: 1
---- !u!4 &1015499594 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4425252173966862258, guid: b146830ee05c660449fe32c8c55a42b5,
-    type: 3}
-  m_PrefabInstance: {fileID: 1496198075}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1051083096
 GameObject:
   m_ObjectHideFlags: 0
@@ -3188,17 +3188,17 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 16fbc29d40fccdf4ab0ee30ee08274fc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
+  m_EditorClassIdentifier: GameScripts::PlayerMovement
   runSpeed: 76
   sideSpeed: 5
-  _jumpForce: 15
+  _jumpForce: 7
   _jumpForwardBoost: 4
   _angleOfLean: 15
   _speedOfLean: 8
   _playerModel: {fileID: 1076822218}
   _rigidBodyComponent: {fileID: 1076822222}
   _animatorComponent: {fileID: 1076822224}
-  _feetOfPlayer: {fileID: 1015499594}
+  _feetOfPlayer: {fileID: 100634001}
   _groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -3243,8 +3243,8 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1076822217}
   serializedVersion: 5
-  m_Mass: 69
-  m_LinearDamping: 0
+  m_Mass: 75
+  m_LinearDamping: 2
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}

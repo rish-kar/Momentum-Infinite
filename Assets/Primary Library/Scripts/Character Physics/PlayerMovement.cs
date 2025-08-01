@@ -8,10 +8,10 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Settings")] [SerializeField]
-    public float runSpeed = 8f; // Base running speed (forward force)
+    public float runSpeed = 76f; // Base running speed (forward force)
 
-    [SerializeField] public float sideSpeed = 12f; // Speed for side movement (sideways force)
-    [SerializeField] private float _jumpForce = 7f; // Force that is applied while jumping
+    [SerializeField] public float sideSpeed = 5f; // Speed for side movement (sideways force)
+    [SerializeField] private float _jumpForce = 15f; // Force that is applied while jumping
     [SerializeField] private float _jumpForwardBoost = 4f; // Additional boost while jumping forward during running state
 
     [Header("Visual Settings")] [SerializeField]
@@ -36,6 +36,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float _respawnAnimationLength = 3f; // Length of respawn animation
     private bool _isRespawning = false;
     private float _respawnTimer = 0f;
+    private int respawnCount = 0;
+    [SerializeField] private const int maxRespawns = 3;
+    [SerializeField] private GameManager gameManager; // Assign your GameManager in the inspector
+    [SerializeField] private Transform spawnPoint;
     
     // Tracker variables to detemine the movement state
     private bool _isGrounded = true;
@@ -96,6 +100,13 @@ public class PlayerMovement : MonoBehaviour
     {
         InitializeComponents();
         _currentAnimatorState = AnimationState.Idle; // Player always starts in idle state (1st animation state triggered after scene loads)
+        respawnCount = 0;
+        if (_respawnAnimator) _respawnAnimator.gameObject.SetActive(false);
+        
+        if (spawnPoint) {
+            transform.position = spawnPoint.position;
+            _lastSafePosition = spawnPoint.position;
+        }
     }
 
     /// <summary>
@@ -135,6 +146,35 @@ public class PlayerMovement : MonoBehaviour
         HandleInput();
         SimpleGroundCheck();
         HandleAnimations();
+        
+        if (transform.position.y < -8f && !_isRespawning)
+        {
+            if (respawnCount < maxRespawns)
+            {
+                respawnCount++;
+                _isRespawning = true;
+                transform.position = spawnPoint ? spawnPoint.position : Vector3.zero;
+
+                _rigidBodyComponent.linearVelocity = Vector3.zero;
+                _isGrounded = true;
+                _isJumping = false;
+                _currentAnimatorState = AnimationState.Idle;
+                _animatorComponent.Play("Idle 2 - Crypto", 0, 0f);
+
+                if (_respawnAnimator)
+                {
+                    _respawnAnimator.gameObject.SetActive(true);
+                    _respawnAnimator.Play("Respawning", 0, 0f);
+                }
+                StartCoroutine(EndRespawn(_respawnAnimationLength));
+            }
+            else
+            {
+                _isRespawning = true;
+                if (_respawnAnimator) _respawnAnimator.gameObject.SetActive(false);
+                if (gameManager) gameManager.GameEnds();
+            }
+        }
     }
 
     /// <summary>
@@ -190,6 +230,8 @@ public class PlayerMovement : MonoBehaviour
     /// </summary>
     private void HandleMovement()
     {
+        if (_isRespawning) return; 
+        
         Vector3 velocity = _rigidBodyComponent.linearVelocity;
 
         // Forward movement
@@ -215,50 +257,45 @@ public class PlayerMovement : MonoBehaviour
     /// </summary>
     private void HandleAnimations()
     {
-        if (!_animatorComponent) return; // Simple null check
-
-        if (_isRespawning)
-        {
-            // If already respawning animation is playing, do not change the state until animation is done.
-            return;
-        }
+        if (!_animatorComponent || _isRespawning) return;
+        
 
         // Handle death and respawn sequence - If player falls below a certain height, then trigger a series of events.
-        if (transform.position.y < -5f)
-        {
-            if (_currentAnimatorState != AnimationState.Falling)
-            {
-                _currentAnimatorState = AnimationState.Falling;
-                _animatorComponent.Play("Falling - Crypto");
-            }
-
-            if (transform.position.y < -8f && !_isRespawning)
-            {
-                // Teleport the player to the last safe position immediately.
-                transform.position = _lastSafePosition;
-                _rigidBodyComponent.linearVelocity = Vector3.zero; // The velocity is reset to zero
-                _isGrounded = true;
-                _isJumping = false;
-
-                // Play the 2nd idle animation (Default Idle as Idle 1 is only triggered once)
-                _currentAnimatorState = AnimationState.Idle;
-                _animatorComponent.Play("Idle 2 - Crypto", 0, 0f);
-
-                // Respawning sequence triggered
-                _isRespawning = true;
-
-                // Trigger the respawn animation screen
-                if (_respawnAnimator != null)
-                {
-                    _respawnAnimator.Play("Respawning", 0, 0f);
-                }
-
-                // Start the timer to reset respawn state back to normal
-                StartCoroutine(EndRespawn(_respawnAnimationLength));
-                return;
-            }
-            return;
-        }
+        // if (transform.position.y < -5f)
+        // {
+        //     if (_currentAnimatorState != AnimationState.Falling)
+        //     {
+        //         _currentAnimatorState = AnimationState.Falling;
+        //         _animatorComponent.Play("Falling - Crypto");
+        //     }
+        //
+        //     if (transform.position.y < -8f && !_isRespawning)
+        //     {
+        //         // Teleport the player to the last safe position immediately.
+        //         transform.position = _lastSafePosition;
+        //         _rigidBodyComponent.linearVelocity = Vector3.zero; // The velocity is reset to zero
+        //         _isGrounded = true;
+        //         _isJumping = false;
+        //
+        //         // Play the 2nd idle animation (Default Idle as Idle 1 is only triggered once)
+        //         _currentAnimatorState = AnimationState.Idle;
+        //         _animatorComponent.Play("Idle 2 - Crypto", 0, 0f);
+        //
+        //         // Respawning sequence triggered
+        //         _isRespawning = true;
+        //
+        //         // Trigger the respawn animation screen
+        //         if (_respawnAnimator != null)
+        //         {
+        //             _respawnAnimator.Play("Respawning", 0, 0f);
+        //         }
+        //
+        //         // Start the timer to reset respawn state back to normal
+        //         StartCoroutine(EndRespawn(_respawnAnimationLength));
+        //         return;
+        //     }
+        //     return;
+        // }
 
 
         // This part of the code is responsible for checking and updating the animation states
@@ -304,6 +341,7 @@ public class PlayerMovement : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
         _isRespawning = false;
+        HandleAnimations();
     }
 
     /// <summary>
