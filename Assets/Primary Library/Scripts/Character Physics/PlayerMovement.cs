@@ -47,6 +47,11 @@ public class PlayerMovement : MonoBehaviour
     private bool _isJumping;
     private float _horizontalInput; // Special variable to check if there is horizontal input
 
+    
+    [SerializeField] private float fallingThreshold = 50f;
+    private float groundYAtThreshold = 0f;
+    private bool hasPassedThreshold = false;
+
 
     /// <summary>
     /// Gets the current speed of the player based on whether they are running or not.
@@ -149,6 +154,7 @@ public class PlayerMovement : MonoBehaviour
         
         if (transform.position.y < -8f && !_isRespawning)
         {
+            _isRespawning = true;
             if (respawnCount < maxRespawns)
             {
                 respawnCount++;
@@ -175,6 +181,13 @@ public class PlayerMovement : MonoBehaviour
                 if (gameManager) gameManager.GameEnds();
             }
         }
+        
+        if (!hasPassedThreshold && transform.position.z > fallingThreshold)
+        {
+            groundYAtThreshold = transform.position.y;
+            hasPassedThreshold = true;
+        }
+
     }
 
     /// <summary>
@@ -301,7 +314,16 @@ public class PlayerMovement : MonoBehaviour
         // This part of the code is responsible for checking and updating the animation states
         AnimationState targetState = _currentAnimatorState;
 
-        if (_isJumping)
+        if (
+            hasPassedThreshold &&
+            !_isGrounded &&
+            _rigidBodyComponent.linearVelocity.y < -0.1f &&
+            transform.position.y < groundYAtThreshold - 0.1f // you can make this 0.2 or 0.5 for safety if your ground is uneven
+        )
+        {
+            targetState = AnimationState.Falling;
+        }
+        else if (_isJumping)
         {
             targetState = AnimationState.Jumping;
         }
