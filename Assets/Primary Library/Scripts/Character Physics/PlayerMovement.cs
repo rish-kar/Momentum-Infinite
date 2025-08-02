@@ -37,11 +37,13 @@ public class PlayerMovement : MonoBehaviour
     private bool _isRespawning = false;
     private float _respawnTimer = 0f;
     private int respawnCount = 0;
-    [SerializeField] private const int maxRespawns = 3;
-    [SerializeField] private GameManager gameManager; // Assign your GameManager in the inspector
-    [SerializeField] private Transform spawnPoint;
+    [SerializeField] private const int maxRespawns = 9;
+    [SerializeField] private GameManager gameManager; // 
     
-    // Tracker variables to detemine the movement state
+    [SerializeField] private Transform spawnPoint;
+    private bool isGameOver = false;
+    
+    // Tracker variables to determine the movement state
     private bool _isGrounded = true;
     private bool _isRunning;
     private bool _isJumping;
@@ -51,6 +53,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float fallingThreshold = 50f;
     private float groundYAtThreshold = 0f;
     private bool hasPassedThreshold = false;
+    public string CurrentAnimationStateName => _currentAnimatorState.ToString();
+
 
 
     /// <summary>
@@ -148,13 +152,14 @@ public class PlayerMovement : MonoBehaviour
     /// </summary>
     void Update()
     {
+        if (isGameOver) return; 
+        
         HandleInput();
         SimpleGroundCheck();
         HandleAnimations();
         
         if (transform.position.y < -8f && !_isRespawning)
         {
-            _isRespawning = true;
             if (respawnCount < maxRespawns)
             {
                 respawnCount++;
@@ -176,7 +181,7 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-                _isRespawning = true;
+                isGameOver = true;
                 if (_respawnAnimator) _respawnAnimator.gameObject.SetActive(false);
                 if (gameManager) gameManager.GameEnds();
             }
@@ -272,45 +277,6 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!_animatorComponent || _isRespawning) return;
         
-
-        // Handle death and respawn sequence - If player falls below a certain height, then trigger a series of events.
-        // if (transform.position.y < -5f)
-        // {
-        //     if (_currentAnimatorState != AnimationState.Falling)
-        //     {
-        //         _currentAnimatorState = AnimationState.Falling;
-        //         _animatorComponent.Play("Falling - Crypto");
-        //     }
-        //
-        //     if (transform.position.y < -8f && !_isRespawning)
-        //     {
-        //         // Teleport the player to the last safe position immediately.
-        //         transform.position = _lastSafePosition;
-        //         _rigidBodyComponent.linearVelocity = Vector3.zero; // The velocity is reset to zero
-        //         _isGrounded = true;
-        //         _isJumping = false;
-        //
-        //         // Play the 2nd idle animation (Default Idle as Idle 1 is only triggered once)
-        //         _currentAnimatorState = AnimationState.Idle;
-        //         _animatorComponent.Play("Idle 2 - Crypto", 0, 0f);
-        //
-        //         // Respawning sequence triggered
-        //         _isRespawning = true;
-        //
-        //         // Trigger the respawn animation screen
-        //         if (_respawnAnimator != null)
-        //         {
-        //             _respawnAnimator.Play("Respawning", 0, 0f);
-        //         }
-        //
-        //         // Start the timer to reset respawn state back to normal
-        //         StartCoroutine(EndRespawn(_respawnAnimationLength));
-        //         return;
-        //     }
-        //     return;
-        // }
-
-
         // This part of the code is responsible for checking and updating the animation states
         AnimationState targetState = _currentAnimatorState;
 
@@ -318,7 +284,7 @@ public class PlayerMovement : MonoBehaviour
             hasPassedThreshold &&
             !_isGrounded &&
             _rigidBodyComponent.linearVelocity.y < -0.1f &&
-            transform.position.y < groundYAtThreshold - 0.1f // you can make this 0.2 or 0.5 for safety if your ground is uneven
+            transform.position.y < groundYAtThreshold - 0.1f
         )
         {
             targetState = AnimationState.Falling;
@@ -362,7 +328,8 @@ public class PlayerMovement : MonoBehaviour
     private IEnumerator EndRespawn(float delay)
     {
         yield return new WaitForSeconds(delay);
-        _isRespawning = false;
+        if (!isGameOver)
+            _isRespawning = false;
         HandleAnimations();
     }
 

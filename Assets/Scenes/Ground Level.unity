@@ -1788,7 +1788,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f95fc7abff3946d8a5bf040babb7442d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentObjectSpawnManager
-  spawnPercentage: 0
+  spawnPercentage: 17
   xAxisRange: {x: -7.1, y: 10.55}
   clearHalfWidth: 2
   zAxisJitter: 5
@@ -2066,7 +2066,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.9494792, y: 0.015699683}
   m_AnchorMax: {x: 0.98100007, y: 0.07058366}
-  m_AnchoredPosition: {x: 2.3897777, y: 0.91069704}
+  m_AnchoredPosition: {x: 2.3897705, y: 0.91070557}
   m_SizeDelta: {x: -15.6709, y: -4.4164}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &699478810
@@ -2734,17 +2734,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 1076822218}
   lookAhead: 300
-  extraSpeed: 400
+  boosterSpeed: 4
   stuckSeconds: 1
-  zTeleportStep: 2
-  teleportCooldown: 2
+  zTeleportStepDistance: 2
+  cooldownTimer: 2
   obstacleMask:
     serializedVersion: 2
     m_Bits: 256
   tileLength: 10
-  tileWidth: 2.15
+  widthOfTile: 2.15
   minClearanceWidth: 1.5
-  raycastSpacing: 0.5
+  raycastGap: 0.5
   rayHeightOffset: 1
 --- !u!195 &920161670
 NavMeshAgent:
@@ -3203,11 +3203,12 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _groundCheckDistance: 0.3
-  _movementDebugger: 0
+  _movementDebugger: 1
   _respawnAnimator: {fileID: 806949840}
   _respawnAnimationLength: 3
-  gameManager: {fileID: 0}
-  spawnPoint: {fileID: 0}
+  gameManager: {fileID: 1063078841}
+  spawnPoint: {fileID: 1574626339}
+  fallingThreshold: 50
 --- !u!114 &1076822221
 MonoBehaviour:
   m_ObjectHideFlags: 0

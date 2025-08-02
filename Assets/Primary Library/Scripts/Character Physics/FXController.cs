@@ -47,7 +47,8 @@ public class FXController : MonoBehaviour
         if (player == null) return;
 
         // Only emit dust when the player is grounded and in continuous motion state
-        if (player.IsGrounded && player.IsRunning)
+        if (player.IsGrounded && player.IsRunning && player.CurrentAnimationStateName == "Running")
+
         {
             float t = Mathf.InverseLerp(minSpeedForDust, maxSpeedForDust, player.CurrentSpeed);
             float rate = t * maxDustRateOverDistance;
