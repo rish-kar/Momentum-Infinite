@@ -108,7 +108,7 @@ Momentum - Infinite goes further by asking whether the content is still playable
 
 *In-game play view (starting of the project) showing the active runner environment.*
 
-![Project Phase 4 - Game View](Screenshots/Game$20View.png)
+![Project Phase 4 - Game View](Screenshots/Game%20View.png)
 
 *In-game play view (ending of the project) showing the active runner environment.*
 
